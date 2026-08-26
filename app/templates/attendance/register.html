@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block page_title %}Attendance register{% endblock %}
+{% block heading %}Attendance register{% endblock %}
+{% block subheading %}
+  {{ start|d }} to {{ end|d }} &middot;
+  {{ department.name if department else 'All departments' }} &middot;
+  {{ totals.records }} record(s)
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2 flex-shrink-0">
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('attendance.export_register', fmt='csv', start=start, end=end, department_id=department.id if department else None) }}">Export CSV</a>
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('attendance.export_register', fmt='pdf', start=start, end=end, department_id=department.id if department else None) }}">Export PDF</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end filters mb-3">
+      <div class="col-6 col-md-3">
+        <label for="start" class="form-label small fw-semibold mb-1">From</label>
+        <input type="date" class="form-control form-control-sm" id="start" name="start" value="{{ start.isoformat() }}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="end" class="form-label small fw-semibold mb-1">To</label>
+        <input type="date" class="form-control form-control-sm" id="end" name="end" value="{{ end.isoformat() }}">
+      </div>
+      {% if departments %}
+      <div class="col-md-4">
+        <label for="department_id" class="form-label small fw-semibold mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id">
+          <option value="">All departments</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {{ 'selected' if department and dept.id == department.id }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-md-2">
+        <button class="btn btn-primary btn-sm w-100" type="submit">Apply</button>
+      </div>
+    </form>
+
+    <hr class="my-3">
+
+    <form method="post" action="{{ url_for('attendance.mark_absentees') }}"
+          class="d-flex align-items-center gap-3 flex-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="date" value="{{ end.isoformat() }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit">
+        Flag absentees for {{ end|d('%d %b') }}
+      </button>
+      <span class="text-secondary" style="font-size:.72rem">
+        Marks anyone rostered on a completed shift that day who never signed in.
+      </span>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Hours on site</div>
+      <div class="stat-tile__value fs-4">{{ totals.worked|duration }}</div>
+      <div class="stat-tile__meta">of {{ totals.scheduled|duration }} rostered</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-amber' if totals.overtime }}">
+      <div class="stat-tile__label">Overtime</div>
+      <div class="stat-tile__value fs-4">{{ totals.overtime|duration }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-amber' if totals.late }}">
+      <div class="stat-tile__label">Late arrivals</div>
+      <div class="stat-tile__value">{{ totals.late }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-red' if totals.absent }}">
+      <div class="stat-tile__label">Absences</div>
+      <div class="stat-tile__value">{{ totals.absent }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="h6 mb-0 fw-semibold">Reconciliation</h2>
+    <p class="mb-0 small text-secondary">Planned hours against hours actually recorded on site.</p>
+  </div>
+  {% if records %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Date</th><th>Staff</th><th>Dept</th><th>Shift</th>
+          <th>In</th><th>Out</th>
+          <th class="text-end">Rostered</th><th class="text-end">On site</th><th class="text-end">Away</th>
+          <th class="text-end">Late</th><th class="text-end">Early</th><th class="text-end">Overtime</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+        <tr>
+          <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+          <td>
+            <a href="{{ url_for('profile.view', staff_id=row.staff.id) }}" class="fw-semibold text-decoration-none">
+              {{ row.staff.full_name }}</a>
+            <div class="text-secondary" style="font-size:.68rem">{{ row.staff.staff_no }}</div>
+          </td>
+          <td class="text-secondary">{{ row.staff.department.code }}</td>
+          <td>{% if row.shift %}{{ row.shift.short_name }}{% else %}<span class="text-secondary">-</span>{% endif %}</td>
+          <td class="font-mono">{{ row.sign_in_at|dt('%H:%M') }}</td>
+          <td class="font-mono">{{ row.sign_out_at|dt('%H:%M') if row.sign_out_at else '-' }}</td>
+          <td class="text-end text-secondary">{{ row.scheduled_minutes|duration }}</td>
+          <td class="text-end fw-semibold">{{ row.worked_minutes|duration }}</td>
+          <td class="text-end">{{ row.break_minutes|duration if row.break_minutes else '-' }}</td>
+          <td class="text-end {{ 'text-warning fw-semibold' if row.late_minutes }}">
+            {{ row.late_minutes|duration if row.late_minutes else '-' }}</td>
+          <td class="text-end">{{ row.early_departure_minutes|duration if row.early_departure_minutes else '-' }}</td>
+          <td class="text-end {{ 'text-success fw-semibold' if row.overtime_minutes }}">
+            {{ row.overtime_minutes|duration if row.overtime_minutes else '-' }}</td>
+          <td>
+            <span class="badge-soft {{ {'ON_DUTY':'green','TEMPORARILY_OUT':'amber','COMPLETED':'blue','ABSENT':'red'}.get(row.status,'grey') }}">
+              {{ row.status|titleise }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <strong>No attendance records in this period</strong>
+      Adjust the date range, or ask staff to sign in from their attendance page.
+    </div>
+  </div>
+  {% endif %}
+  <div class="card-footer small text-secondary">
+    Hours on site exclude any period logged as away from the facility. Overtime
+    counts only time beyond the rostered end greater than
+    {{ config.OVERTIME_THRESHOLD_MINUTES }} minutes.
+  </div>
+</div>
+{% endblock %}

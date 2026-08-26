@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block page_title %}Notifications{% endblock %}
+{% block heading %}Notifications{% endblock %}
+{% block subheading %}{{ unread }} unread of {{ rows|length }} recent message(s){% endblock %}
+
+{% block topbar_actions %}
+{% if unread %}
+<form method="post" action="{{ url_for('notifications.mark_all_read') }}" class="flex-shrink-0">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn btn-outline-secondary btn-sm" type="submit">Mark all as read</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if rows %}
+  <div class="list-group list-group-flush">
+    {% for row in rows %}
+    <div class="list-group-item d-flex gap-3 py-3 {{ 'bg-body-tertiary' if row.is_unread }}">
+      <span class="status-dot {{ 'green' if row.is_unread else 'grey' }} mt-2"
+            title="{{ 'Unread' if row.is_unread else 'Read' }}"></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+          <strong class="small">{{ row.subject }}</strong>
+          <span class="badge-soft brand">{{ row.category|titleise }}</span>
+          <span class="text-secondary ms-auto text-nowrap" style="font-size:.7rem">
+            {{ row.created_at|dt('%d %b, %H:%M') }}</span>
+        </div>
+        <div class="text-secondary small" style="white-space:pre-line">{{ row.body }}</div>
+      </div>
+      <form method="post" action="{{ url_for('notifications.mark_read', notification_id=row.id) }}"
+            class="flex-shrink-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="submit">
+          {{ 'Open' if row.link else 'Mark read' }}
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <strong>No notifications yet</strong>
+      You will be messaged here, and by email and SMS, when a roster is
+      published or your shifts change.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

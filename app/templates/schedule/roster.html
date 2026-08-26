@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block page_title %}{{ department.name }} roster{% endblock %}
+{% block heading %}{{ department.name }} duty roster{% endblock %}
+{% block subheading %}
+  {{ start|d('%d %b') }} to {{ (dates|last)|d('%d %b %Y') }}
+  {%- if roster %} &middot; {{ roster.live_assignments()|length }} shifts &middot;
+    {{ 'Published' if roster.is_published else 'Draft' }}{% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2 flex-shrink-0">
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('schedule.department_roster', department_id=department.id, week=prev_week) }}">&larr; Prev</a>
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('schedule.department_roster', department_id=department.id, week=next_week) }}">Next &rarr;</a>
+  {% if roster %}
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('schedule.export_roster', roster_id=roster.id) }}">Export CSV</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if departments|length > 1 %}
+<ul class="nav nav-pills mb-3 small">
+  {% for dept in departments %}
+  <li class="nav-item">
+    <a class="nav-link py-1 px-3 {{ 'active' if dept.id == department.id }}"
+       href="{{ url_for('schedule.department_roster', department_id=dept.id, week=start.isoformat()) }}">
+      {{ dept.name }}</a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if not roster %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <strong>No roster for this week</strong>
+      {% if may_manage %}
+        Generate one and the engine will build a compliant, balanced schedule
+        from your department's staffing requirements.
+        <form method="post" action="{{ url_for('schedule.generate') }}" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="department_id" value="{{ department.id }}">
+          <input type="hidden" name="week" value="{{ start.isoformat() }}">
+          <button class="btn btn-primary" type="submit">Generate roster for this week</button>
+        </form>
+      {% else %}
+        Your manager has not published a roster for this period yet. You will be
+        notified by email and SMS as soon as it is available.
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex flex-wrap gap-4">
+        <div>
+          <div class="stat-tile__label">Status</div>
+          {% if roster.is_published %}
+            <span class="badge-soft green">Published</span>
+            <span class="text-secondary small">by {{ roster.published_by.full_name }}, {{ roster.published_at|dt }}</span>
+          {% else %}
+            <span class="badge-soft amber">Draft</span>
+            <span class="text-secondary small">visible only to you</span>
+          {% endif %}
+        </div>
+        <div>
+          <div class="stat-tile__label">Coverage</div>
+          <span class="fw-semibold {{ 'text-success' if roster.gap_count == 0 else 'text-danger' }}">
+            {{ roster.coverage_rate }}%</span>
+          {% if roster.gap_count %}<span class="badge-soft red">{{ roster.gap_count }} gap(s)</span>{% endif %}
+        </div>
+        <div>
+          <div class="stat-tile__label">Total hours</div>
+          <span class="fw-semibold">{{ roster.total_hours }}h</span>
+        </div>
+        <div>
+          <div class="stat-tile__label">Replacements</div>
+          <span class="fw-semibold">{{ roster.replacement_count }}</span>
+        </div>
+        <div>
+          <div class="stat-tile__label">Generated in</div>
+          <span class="fw-semibold">{{ '%.2f'|format(roster.generation_seconds or 0) }}s</span>
+        </div>
+        <div>
+          <div class="stat-tile__label">Fairness cost</div>
+          <span class="fw-semibold">{{ roster.fairness_score }}</span>
+        </div>
+      </div>
+
+      {% if may_manage %}
+      <div class="d-flex gap-2">
+        {% if roster.is_published %}
+        <form method="post" action="{{ url_for('schedule.withdraw', roster_id=roster.id) }}"
+              data-confirm="Withdrawing this roster hides it from staff until it is published again. Continue?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-secondary" type="submit">Withdraw to draft</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('schedule.generate') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="department_id" value="{{ department.id }}">
+          <input type="hidden" name="week" value="{{ start.isoformat() }}">
+          <button class="btn btn-outline-secondary" type="submit">Regenerate</button>
+        </form>
+        <form method="post" action="{{ url_for('schedule.publish', roster_id=roster.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary" type="submit">Publish and notify staff</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if roster.is_draft and may_manage %}
+<div class="alert alert-warning py-2 px-3 small">
+  This roster is a draft. Staff cannot see it yet. Publishing sends an in-app
+  message, an email and an SMS to all {{ department.active_members()|length }}
+  members of {{ department.name }} with their own shifts for the week.
+</div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center gap-2">
+    <div class="flex-grow-1">
+      <h2 class="h6 mb-0 fw-semibold">Weekly duty grid</h2>
+      <p class="mb-0 small text-secondary">Each cell shows the staff assigned to that shift on that day.</p>
+    </div>
+    <div class="d-flex gap-3" style="font-size:.72rem">
+      <span class="d-flex align-items-center gap-1"><span class="status-dot green"></span> Scheduled</span>
+      <span class="d-flex align-items-center gap-1"><span class="status-dot amber"></span> Replacement</span>
+      <span class="d-flex align-items-center gap-1"><span class="status-dot red"></span> Unfilled</span>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="roster-table">
+      <thead>
+        <tr>
+          <th class="shift-col">Shift</th>
+          {% for day in dates %}
+          <th class="day-col {{ 'is-weekend' if day.weekday() >= 5 }}">
+            {{ day.strftime('%a') }}<span>{{ day.strftime('%d %b') }}</span>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for shift in shifts %}
+        <tr>
+          <td class="shift-col">
+            {{ shift.short_name }}
+            <small>{{ shift.window_label }} &middot; {{ shift.duration_hours }}h</small>
+          </td>
+          {% for day in dates %}
+          {% set cell = grid[day][shift.id] %}
+          <td class="{{ 'is-weekend' if day.weekday() >= 5 }}">
+            {% for item in cell %}
+              {% if item.status == 'UNFILLED' %}
+                <span class="shift-chip is-gap">
+                  <strong>Unfilled</strong>
+                  <small>No compliant staff available</small>
+                  {% if may_manage %}
+                  <a href="{{ url_for('schedule.override', assignment_id=item.id) }}" style="font-size:.66rem">Assign</a>
+                  {% endif %}
+                </span>
+              {% elif item.status in ('SCHEDULED', 'REPLACEMENT') %}
+                <span class="shift-chip {{ 'is-replacement' if item.status == 'REPLACEMENT' }} {{ 'is-me' if item.staff_id == current_user.id }}">
+                  <strong>
+                    {% if may_manage %}
+                    <a href="{{ url_for('schedule.override', assignment_id=item.id) }}">{{ item.staff.full_name }}</a>
+                    {% else %}{{ item.staff.full_name }}{% endif %}
+                  </strong>
+                  <small>
+                    {{ item.staff.job_title or item.staff.role_label }}
+                    {%- if item.status == 'REPLACEMENT' %} &middot; cover{% endif %}
+                  </small>
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="shift-empty">Not staffed</span>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if roster.notes %}
+  <div class="card-footer small text-secondary">
+    Engine result: {{ roster.notes }}
+    {%- if roster.optimiser_iterations %} &middot; {{ roster.optimiser_iterations }} optimisation iterations{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if fairness %}
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">Workload distribution</h2>
+          <p class="mb-0 small text-secondary">How the week's burden falls across the department.</p>
+        </div>
+        <span class="text-secondary small">
+          Night spread {{ fairness.night_spread }} &middot; Hours spread {{ fairness.hours_spread }}h
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="chart-box h-md mb-3">
+          <canvas id="workloadChart" data-chart='{{ {
+            "kind": "workload",
+            "labels": fairness.rows | map(attribute="staff") | map(attribute="full_name") | list,
+            "nights": fairness.rows | map(attribute="nights") | list,
+            "weekends": fairness.rows | map(attribute="weekends") | list
+          } | tojson }}'></canvas>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Staff</th><th>Role</th>
+                <th class="text-end">Shifts</th><th class="text-end">Nights</th>
+                <th class="text-end">Weekends</th><th class="text-end">Hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in fairness.rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.staff.full_name }}</td>
+                <td class="text-secondary">{{ row.staff.job_title or row.staff.role_label }}</td>
+                <td class="text-end">
+                  {{ roster.live_assignments() | selectattr('staff_id', 'equalto', row.staff.id) | list | length }}
+                </td>
+                <td class="text-end">{{ row.nights }}</td>
+                <td class="text-end">{{ row.weekends }}</td>
+                <td class="text-end fw-semibold">{{ row.hours }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer small text-secondary">
+        A night spread of 0 means every staff member took the same number of night
+        shifts. The optimiser minimises this alongside weekend and hour spread.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Staffing requirements</h3></div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Shift</th><th class="text-end">Weekday</th><th class="text-end">Weekend</th></tr>
+          </thead>
+          <tbody>
+            {% for requirement in department.requirements|sort(attribute='shift.sort_order') %}
+            <tr>
+              <td class="fw-semibold">{{ requirement.shift.short_name }}
+                <div class="text-secondary" style="font-size:.68rem">{{ requirement.shift.window_label }}</div>
+              </td>
+              <td class="text-end">{{ requirement.min_staff }}</td>
+              <td class="text-end">{{ requirement.weekend_min_staff }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if current_user.has_oversight %}
+      <div class="card-footer small">
+        <a href="{{ url_for('admin.department_settings', department_id=department.id) }}">Adjust requirements</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if roster and fairness %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script>HospitalPortal.renderCharts();</script>
+{% endif %}
+{% endblock %}

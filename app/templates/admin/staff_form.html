@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block page_title %}{{ 'Edit staff' if staff else 'Add staff member' }}{% endblock %}
+{% block heading %}{{ staff.full_name if staff else 'Add a staff member' }}{% endblock %}
+{% block subheading %}
+  {{ 'Update this account and its scheduling attributes' if staff else 'Create a portal account and add them to the rota' }}
+{% endblock %}
+
+{% block content %}
+<form method="post" style="max-width:820px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="card mb-3">
+    <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Identity</h2></div>
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="first_name" class="form-label small fw-semibold">First name</label>
+          <input type="text" class="form-control" id="first_name" name="first_name"
+                 value="{{ staff.first_name if staff else '' }}" required>
+        </div>
+        <div class="col-md-6">
+          <label for="last_name" class="form-label small fw-semibold">Last name</label>
+          <input type="text" class="form-control" id="last_name" name="last_name"
+                 value="{{ staff.last_name if staff else '' }}" required>
+        </div>
+      </div>
+
+      {% if not staff %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="staff_no" class="form-label small fw-semibold">Staff number</label>
+          <input type="text" class="form-control" id="staff_no" name="staff_no" placeholder="TH-NUR-007" required>
+          <div class="form-text">Used as a sign-in identifier. Must be unique.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="email" class="form-label small fw-semibold">Work email</label>
+          <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+      </div>
+      {% else %}
+      <dl class="row small mb-3">
+        <dt class="col-3 text-secondary fw-normal">Staff number</dt><dd class="col-9 font-mono">{{ staff.staff_no }}</dd>
+        <dt class="col-3 text-secondary fw-normal">Email</dt><dd class="col-9">{{ staff.email }}</dd>
+      </dl>
+      {% endif %}
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="phone" class="form-label small fw-semibold">Mobile number</label>
+          <input type="tel" class="form-control" id="phone" name="phone"
+                 value="{{ staff.phone if staff else '' }}" placeholder="0244000000">
+          <div class="form-text">Required for SMS notifications.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="job_title" class="form-label small fw-semibold">Job title</label>
+          <input type="text" class="form-control" id="job_title" name="job_title"
+                 value="{{ staff.job_title if staff else '' }}"
+                 placeholder="Staff Nurse, Medical Officer...">
+        </div>
+      </div>
+
+      <div>
+        <label for="qualification" class="form-label small fw-semibold">Qualification</label>
+        <input type="text" class="form-control" id="qualification" name="qualification"
+               value="{{ staff.qualification if staff else '' }}"
+               placeholder="RGN, MBChB, BPharm...">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">
+      <h2 class="h6 mb-0 fw-semibold">Role and department</h2>
+      <p class="mb-0 small text-secondary">The portal role controls what they can see and do; it is separate from their job title.</p>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="department_id" class="form-label small fw-semibold">Department</label>
+          <select class="form-select" id="department_id" name="department_id" required>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}" {{ 'selected' if staff and staff.department_id == dept.id }}>
+              {{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="role" class="form-label small fw-semibold">Portal role</label>
+          <select class="form-select" id="role" name="role" required>
+            {% for role in roles %}
+            <option value="{{ role.value }}" {{ 'selected' if staff and staff.role == role.value }}>
+              {{ role.label }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">
+            Staff see only their own records. Managers act on their own
+            department. HR and Administrator see the whole hospital.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">
+      <h2 class="h6 mb-0 fw-semibold">Scheduling attributes</h2>
+      <p class="mb-0 small text-secondary">How the engine treats this person when building a roster.</p>
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label for="preferred_shift" class="form-label small fw-semibold">Preferred shift</label>
+          <select class="form-select" id="preferred_shift" name="preferred_shift">
+            <option value="NONE" {{ 'selected' if not staff or not staff.preferred_shift }}>No preference</option>
+            {% for shift in shifts %}
+            <option value="{{ shift.value }}" {{ 'selected' if staff and staff.preferred_shift == shift.value }}>
+              {{ shift.value|titleise }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">A soft preference, honoured where fairness and cover allow.</div>
+        </div>
+        <div class="col-md-6">
+          <label for="max_weekly_hours" class="form-label small fw-semibold">Personal weekly hour cap</label>
+          <input type="number" class="form-control" id="max_weekly_hours" name="max_weekly_hours"
+                 min="0" max="80"
+                 value="{{ staff.max_weekly_hours if staff and staff.max_weekly_hours else '' }}"
+                 placeholder="Hospital default ({{ config.MAX_WEEKLY_HOURS }})">
+          <div class="form-text">Leave blank to use the hospital-wide limit.</div>
+        </div>
+      </div>
+
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="can_work_nights" name="can_work_nights" value="1"
+               {{ 'checked' if not staff or staff.can_work_nights }}>
+        <label class="form-check-label" for="can_work_nights">
+          <strong class="small">Cleared for night duty</strong>
+          <div class="text-secondary" style="font-size:.72rem">
+            Unchecking excludes this person from the 22:00 to 07:00 shift as a
+            hard constraint, not a preference.
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Access</h2></div>
+    <div class="card-body">
+      {% if staff %}
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="reset_password" name="reset_password" value="1">
+        <label class="form-check-label" for="reset_password">
+          <strong class="small">Reset password</strong>
+          <div class="text-secondary" style="font-size:.72rem">
+            Sets the password back to <code>{{ default_password }}</code>
+            and forces a change at next sign-in.
+          </div>
+        </label>
+      </div>
+      {% else %}
+      <label for="password" class="form-label small fw-semibold">Initial password</label>
+      <input type="text" class="form-control" id="password" name="password" value="{{ default_password }}">
+      <div class="form-text">
+        The staff member is required to change this the first time they sign in.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">{{ 'Save changes' if staff else 'Create account' }}</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.staff_list') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

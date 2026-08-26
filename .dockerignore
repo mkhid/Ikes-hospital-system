@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+instance/
+*.db
+*.sqlite3
+wheels/
+.git/
+.gitignore
+*.docx
+*.log
+.vscode/
+.idea/
+.env

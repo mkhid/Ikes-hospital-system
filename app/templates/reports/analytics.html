@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block page_title %}Workforce analytics{% endblock %}
+{% block heading %}Workforce analytics{% endblock %}
+{% block subheading %}
+  {{ start|d }} to {{ end|d }} &middot;
+  {{ department.name if department else 'Hospital-wide' }} &middot;
+  {{ report.headcount }} active staff
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2 flex-shrink-0">
+  <a class="btn btn-primary btn-sm"
+     href="{{ url_for('reports.audit_report', fmt='pdf', start=start, end=end, department_id=department.id if department else None) }}">
+    Audit report (PDF)</a>
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('reports.audit_report', fmt='csv', start=start, end=end, department_id=department.id if department else None) }}">
+    CSV</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end filters">
+      <div class="col-6 col-md-3">
+        <label for="start" class="form-label small fw-semibold mb-1">From</label>
+        <input type="date" class="form-control form-control-sm" id="start" name="start" value="{{ start.isoformat() }}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="end" class="form-label small fw-semibold mb-1">To</label>
+        <input type="date" class="form-control form-control-sm" id="end" name="end" value="{{ end.isoformat() }}">
+      </div>
+      {% if departments %}
+      <div class="col-md-4">
+        <label for="department_id" class="form-label small fw-semibold mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id">
+          <option value="">Hospital-wide</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {{ 'selected' if department and dept.id == department.id }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="col-md-2">
+        <button class="btn btn-primary btn-sm w-100" type="submit">Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-brand">
+      <div class="stat-tile__label">Shifts scheduled</div>
+      <div class="stat-tile__value">{{ report.scheduling.shifts_scheduled }}</div>
+      <div class="stat-tile__meta">{{ report.scheduling.scheduled_hours }} hours rostered</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-green' if report.scheduling.fill_rate == 100 else 'is-amber' }}">
+      <div class="stat-tile__label">Shift fill rate</div>
+      <div class="stat-tile__value">{{ report.scheduling.fill_rate }}%</div>
+      <div class="stat-tile__meta">{{ report.scheduling.coverage_gaps }} coverage gap(s)</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Utilisation</div>
+      <div class="stat-tile__value">{{ report.attendance.utilisation }}%</div>
+      <div class="stat-tile__meta">{{ report.attendance.worked_hours }}h worked on site</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-red' if report.attendance.absenteeism_rate > 10 }}">
+      <div class="stat-tile__label">Absenteeism</div>
+      <div class="stat-tile__value">{{ report.attendance.absenteeism_rate }}%</div>
+      <div class="stat-tile__meta">{{ report.attendance.absent }} unexplained absence(s)</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-amber' if report.attendance.overtime_hours }}">
+      <div class="stat-tile__label">Overtime</div>
+      <div class="stat-tile__value">{{ report.attendance.overtime_hours }}h</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Punctuality</div>
+      <div class="stat-tile__value">{{ report.attendance.punctuality_rate }}%</div>
+      <div class="stat-tile__meta">{{ report.attendance.late }} late arrival(s)</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-blue">
+      <div class="stat-tile__label">Auto replacements</div>
+      <div class="stat-tile__value">{{ report.scheduling.replacements }}</div>
+      <div class="stat-tile__meta">Shifts refilled by the engine</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-green">
+      <div class="stat-tile__label">Message delivery</div>
+      <div class="stat-tile__value">{{ report.notifications.delivery_rate }}%</div>
+      <div class="stat-tile__meta">{{ report.notifications.sent }} message(s) sent</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Daily coverage</h2>
+        <p class="mb-0 small text-secondary">Filled slots against coverage gaps, day by day.</p>
+      </div>
+      <div class="card-body">
+        {% if report.daily_coverage %}
+        <div class="chart-box h-md">
+          <canvas id="coverageChart" data-chart='{{ {
+            "kind": "coverage",
+            "labels": report.daily_coverage | map(attribute="date") | map("string") | list,
+            "filled": report.daily_coverage | map(attribute="filled") | list,
+            "gaps": report.daily_coverage | map(attribute="gaps") | list
+          } | tojson }}'></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state"><strong>No rostered shifts in this period</strong></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Shift mix</h2>
+        <p class="mb-0 small text-secondary">How the period divides between shift types.</p>
+      </div>
+      <div class="card-body">
+        {% if report.shift_mix %}
+        <div class="chart-box h-md">
+          <canvas id="shiftMixChart" data-chart='{{ {
+            "kind": "shiftMix",
+            "labels": report.shift_mix.keys() | list,
+            "values": report.shift_mix.values() | list
+          } | tojson }}'></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state"><strong>No data</strong></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Rostered against actual hours</h2>
+        <p class="mb-0 small text-secondary">The gap between planned and worked time, per staff member.</p>
+      </div>
+      <div class="card-body">
+        {% if report.per_staff %}
+        <div class="chart-box h-lg">
+          <canvas id="hoursChart" data-chart='{{ {
+            "kind": "hours",
+            "labels": report.per_staff | map(attribute="staff") | map(attribute="full_name") | list,
+            "scheduled": report.per_staff | map(attribute="scheduled_hours") | list,
+            "worked": report.per_staff | map(attribute="worked_hours") | list
+          } | tojson }}'></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state"><strong>No staff in scope</strong></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Communication reliability</h2>
+        <p class="mb-0 small text-secondary">Delivery rate per channel.</p>
+      </div>
+      <div class="card-body">
+        {% if report.notifications.by_channel %}
+        <div class="chart-box h-sm mb-3">
+          <canvas id="deliveryChart" data-chart='{{ {
+            "kind": "delivery",
+            "labels": report.notifications.by_channel.keys() | list,
+            "values": report.notifications.by_channel.values() | map(attribute="rate") | list
+          } | tojson }}'></canvas>
+        </div>
+        <div class="text-secondary small">
+          {{ report.notifications.delivered }} of {{ report.notifications.sent }} messages delivered.
+          {%- if report.notifications.failed %}
+          {{ report.notifications.failed }} failed, usually a missing phone number
+          or email address on file.{% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state"><strong>No messages in this period</strong></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Per staff table -->
+<div class="card mb-3">
+  <div class="card-header">
+    <h2 class="h6 mb-0 fw-semibold">Staff workload and performance</h2>
+    <p class="mb-0 small text-secondary">The table behind the management audit report.</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Staff</th><th>Dept</th>
+          <th class="text-end">Shifts</th><th class="text-end">Nights</th><th class="text-end">Weekends</th>
+          <th class="text-end">Rostered</th><th class="text-end">Worked</th><th class="text-end">Util</th>
+          <th class="text-end">Overtime</th><th class="text-end">Late</th>
+          <th class="text-end">Absent</th><th class="text-end">Leave</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.per_staff %}
+        <tr>
+          <td>
+            <a href="{{ url_for('profile.view', staff_id=row.staff.id) }}" class="fw-semibold text-decoration-none">
+              {{ row.staff.full_name }}</a>
+            <div class="text-secondary" style="font-size:.68rem">{{ row.staff.job_title or row.staff.role_label }}</div>
+          </td>
+          <td class="text-secondary">{{ row.staff.department.code }}</td>
+          <td class="text-end fw-semibold">{{ row.shifts }}</td>
+          <td class="text-end">{{ row.nights }}</td>
+          <td class="text-end">{{ row.weekends }}</td>
+          <td class="text-end text-secondary">{{ row.scheduled_hours }}</td>
+          <td class="text-end">{{ row.worked_hours }}</td>
+          <td class="text-end">{{ row.utilisation }}%</td>
+          <td class="text-end {{ 'text-warning fw-semibold' if row.overtime_hours }}">{{ row.overtime_hours }}</td>
+          <td class="text-end {{ 'text-warning fw-semibold' if row.late_count }}">{{ row.late_count }}</td>
+          <td class="text-end {{ 'text-danger fw-semibold' if row.absences }}">{{ row.absences }}</td>
+          <td class="text-end">{{ row.leave_days }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if report.by_department %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Departmental comparison</h2></div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Department</th><th class="text-end">Staff</th><th class="text-end">Shifts</th>
+          <th class="text-end">Rostered</th><th class="text-end">Worked</th><th class="text-end">Overtime</th>
+          <th class="text-end">Gaps</th><th style="width:140px">Fill rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.by_department %}
+        <tr>
+          <td class="fw-semibold">{{ row.department.name }}</td>
+          <td class="text-end">{{ row.headcount }}</td>
+          <td class="text-end">{{ row.shifts }}</td>
+          <td class="text-end text-secondary">{{ row.scheduled_hours }}</td>
+          <td class="text-end">{{ row.worked_hours }}</td>
+          <td class="text-end">{{ row.overtime_hours }}</td>
+          <td class="text-end {{ 'text-danger fw-semibold' if row.gaps }}">{{ row.gaps }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px" role="progressbar"
+                   aria-valuenow="{{ row.fill_rate|round|int }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar {{ 'bg-success' if row.fill_rate == 100 else ('bg-warning' if row.fill_rate >= 90 else 'bg-danger') }}"
+                     style="width:{{ row.fill_rate }}%"></div>
+              </div>
+              <span class="fw-semibold" style="font-size:.7rem">{{ row.fill_rate }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Leave</h2></div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-6 col-lg-3"><div class="stat-tile__label">Requests</div><div class="fs-5 fw-bold">{{ report.leave.total }}</div></div>
+      <div class="col-6 col-lg-3"><div class="stat-tile__label">Approved</div><div class="fs-5 fw-bold">{{ report.leave.approved }}</div></div>
+      <div class="col-6 col-lg-3"><div class="stat-tile__label">Days granted</div><div class="fs-5 fw-bold">{{ report.leave.days_approved }}</div></div>
+      <div class="col-6 col-lg-3"><div class="stat-tile__label">Turnaround</div><div class="fs-5 fw-bold">{{ report.leave.avg_turnaround_hours }}h</div></div>
+    </div>
+    <div class="alert alert-success py-2 px-3 small mt-3 mb-0">
+      <strong>{{ report.leave.released }}</strong> shift(s) were released by approved
+      leave and <strong>{{ report.leave.auto_refilled }}</strong> were refilled
+      automatically without a manager intervening.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script>HospitalPortal.renderCharts();</script>
+{% endblock %}

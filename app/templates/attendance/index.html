@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block page_title %}Attendance{% endblock %}
+{% block heading %}Attendance{% endblock %}
+{% block subheading %}Sign in, log your exits, sign out{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <h2 class="h6 mb-0 fw-semibold flex-grow-1">Facility terminal</h2>
+        {% if status.signed_in %}
+          {% if status.outside %}
+          <span class="badge-soft amber"><span class="status-dot amber"></span> Outside</span>
+          {% else %}
+          <span class="badge-soft green"><span class="live-dot"></span> On site</span>
+          {% endif %}
+        {% else %}
+          <span class="badge-soft grey">Signed out</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if status.assignment %}
+        <div class="alert alert-light border py-2 px-3 small mb-3">
+          <strong>{{ status.assignment.shift.name }}</strong><br>
+          {{ status.assignment.work_date|d('%A %d %B') }} &middot;
+          {{ status.assignment.shift.window_label }}
+          ({{ status.assignment.shift.duration_hours }}h)
+        </div>
+        {% else %}
+        <div class="alert alert-warning py-2 px-3 small mb-3">
+          You have no rostered shift at this moment. You can still sign in, but
+          the record will be marked as unrostered.
+        </div>
+        {% endif %}
+
+        {% if status.signed_in %}
+        <dl class="row small mb-3">
+          <dt class="col-6 text-secondary fw-normal">Signed in at</dt>
+          <dd class="col-6 fw-semibold">{{ status.record.sign_in_at|dt('%H:%M') }}</dd>
+          <dt class="col-6 text-secondary fw-normal">Time on site</dt>
+          <dd class="col-6 fw-semibold">{{ status.elapsed|duration }}</dd>
+          {% if status.record.late_minutes %}
+          <dt class="col-6 text-secondary fw-normal">Late by</dt>
+          <dd class="col-6 text-warning fw-semibold">{{ status.record.late_minutes|duration }}</dd>
+          {% endif %}
+          {% if status.record.events %}
+          <dt class="col-6 text-secondary fw-normal">Exits logged</dt>
+          <dd class="col-6">{{ status.record.events|length }}</dd>
+          {% endif %}
+        </dl>
+        {% endif %}
+
+        {% if not status.signed_in %}
+          <form method="post" action="{{ url_for('attendance.sign_in') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary w-100" type="submit">Sign in to the facility</button>
+          </form>
+
+        {% elif status.outside %}
+          <div class="alert alert-warning py-2 px-3 small">
+            You logged out at {{ status.open_exit.occurred_at|dt('%H:%M') }}
+            ({{ status.open_exit.reason }}). This time is being deducted from
+            your hours on site.
+          </div>
+          <form method="post" action="{{ url_for('attendance.return_to_facility') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary w-100" type="submit">Log back in on return</button>
+          </form>
+
+        {% else %}
+          <form method="post" action="{{ url_for('attendance.step_out') }}" class="mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="reason" class="form-label small fw-semibold">Leaving the facility? Log the reason</label>
+            <select class="form-select mb-2" id="reason" name="reason">
+              {% for reason in exit_reasons %}
+              <option value="{{ reason }}">{{ reason }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-outline-secondary w-100" type="submit">Log an exit</button>
+          </form>
+
+          <form method="post" action="{{ url_for('attendance.sign_out') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary w-100" type="submit">Sign out for the day</button>
+          </form>
+        {% endif %}
+      </div>
+      <div class="card-footer small text-secondary">
+        Log an exit whenever you leave the facility for a break, an official duty
+        or a personal reason, and log back in on your return. Time outside is
+        excluded from your hours on site.
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-6">
+        <div class="stat-tile">
+          <div class="stat-tile__label">On site this week</div>
+          <div class="stat-tile__value fs-4">{{ week_minutes|duration }}</div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="stat-tile {{ 'is-amber' if week_overtime }}">
+          <div class="stat-tile__label">Overtime this week</div>
+          <div class="stat-tile__value fs-4">{{ week_overtime|duration }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    {% if status.record and status.record.events %}
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Exits logged today</h3></div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Out</th><th>Back</th><th class="text-end">Away</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            {% for event in status.record.events %}
+            <tr>
+              <td class="font-mono">{{ event.occurred_at|dt('%H:%M') }}</td>
+              <td class="font-mono">{{ event.returned_at|dt('%H:%M') if event.returned_at else '-' }}</td>
+              <td class="text-end">
+                {% if event.duration_minutes is not none %}{{ event.duration_minutes|duration }}
+                {% else %}<span class="badge-soft amber">Open</span>{% endif %}
+              </td>
+              <td class="text-secondary">{{ event.reason }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">My attendance history</h2>
+        <p class="mb-0 small text-secondary">Reconciled against the shift you were rostered for.</p>
+      </div>
+      {% if history %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th><th>Shift</th><th>In</th><th>Out</th>
+              <th class="text-end">Rostered</th><th class="text-end">On site</th>
+              <th class="text-end">Away</th><th class="text-end">Late</th>
+              <th class="text-end">Overtime</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in history %}
+            <tr>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td>{% if row.shift %}<span class="badge-soft brand">{{ row.shift.short_name }}</span>
+                  {% else %}<span class="text-secondary">Unrostered</span>{% endif %}</td>
+              <td class="font-mono">{{ row.sign_in_at|dt('%H:%M') }}</td>
+              <td class="font-mono">{{ row.sign_out_at|dt('%H:%M') if row.sign_out_at else '-' }}</td>
+              <td class="text-end text-secondary">{{ row.scheduled_minutes|duration }}</td>
+              <td class="text-end fw-semibold">{{ row.worked_minutes|duration }}</td>
+              <td class="text-end">{{ row.break_minutes|duration if row.break_minutes else '-' }}</td>
+              <td class="text-end {{ 'text-warning fw-semibold' if row.late_minutes }}">
+                {{ row.late_minutes|duration if row.late_minutes else '-' }}</td>
+              <td class="text-end {{ 'text-success fw-semibold' if row.overtime_minutes }}">
+                {{ row.overtime_minutes|duration if row.overtime_minutes else '-' }}</td>
+              <td>
+                <span class="badge-soft {{ {'ON_DUTY':'green','TEMPORARILY_OUT':'amber','COMPLETED':'blue','ABSENT':'red'}.get(row.status,'grey') }}">
+                  {{ row.status|titleise }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body">
+        <div class="empty-state">
+          <strong>No attendance recorded yet</strong>
+          Sign in when you arrive and your history will build up here.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

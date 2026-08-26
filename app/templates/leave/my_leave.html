@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block page_title %}My leave{% endblock %}
+{% block heading %}My leave{% endblock %}
+{% block subheading %}Request time off and track your requests{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Request leave</h2></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('leave.submit') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="leave_type" class="form-label small fw-semibold">Type of leave</label>
+            <select class="form-select" id="leave_type" name="leave_type" required>
+              {% for option in leave_types %}
+              <option value="{{ option.value }}">{{ option.value|titleise }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label for="start_date" class="form-label small fw-semibold">From</label>
+              <input type="date" class="form-control" id="start_date" name="start_date"
+                     min="{{ today.isoformat() }}" required>
+            </div>
+            <div class="col-6">
+              <label for="end_date" class="form-label small fw-semibold">To</label>
+              <input type="date" class="form-control" id="end_date" name="end_date"
+                     min="{{ today.isoformat() }}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label small fw-semibold">Reason</label>
+            <textarea class="form-control" id="reason" name="reason" rows="3"
+                      placeholder="Briefly explain your request"></textarea>
+          </div>
+
+          <div class="alert alert-light border py-2 px-3 small">
+            When approved, every shift you hold in this period is released and
+            the engine assigns the fairest available colleague automatically.
+            You and they are both notified.
+          </div>
+
+          <button class="btn btn-primary w-100" type="submit">Submit request</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-6">
+        <div class="stat-tile">
+          <div class="stat-tile__label">Approved days</div>
+          <div class="stat-tile__value">{{ approved_days }}</div>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="stat-tile {{ 'is-amber' if pending_count }}">
+          <div class="stat-tile__label">Pending</div>
+          <div class="stat-tile__value">{{ pending_count }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">My requests</h2>
+        <p class="mb-0 small text-secondary">Every request you have made, most recent first.</p>
+      </div>
+      {% if requests %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Type</th><th>Period</th><th class="text-end">Days</th><th>Status</th>
+              <th>Reviewed by</th><th>Roster effect</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in requests %}
+            <tr>
+              <td class="fw-semibold">{{ row.type_label }}
+                {% if row.is_unplanned %}<span class="badge-soft red">Unplanned</span>{% endif %}
+              </td>
+              <td class="text-nowrap">{{ row.period_label }}</td>
+              <td class="text-end">{{ row.days }}</td>
+              <td>
+                <span class="badge-soft {{ {'APPROVED':'green','PENDING':'amber','REJECTED':'red','CANCELLED':'grey'}[row.status] }}">
+                  {{ row.status|titleise }}</span>
+              </td>
+              <td class="text-secondary">
+                {% if row.reviewed_by %}
+                  {{ row.reviewed_by.full_name }}<br>
+                  <span style="font-size:.68rem">{{ row.reviewed_at|dt('%d %b, %H:%M') }}</span>
+                {% else %}Awaiting review{% endif %}
+              </td>
+              <td>
+                {% if row.shifts_released %}
+                  {{ row.shifts_released }} released,
+                  <span class="text-success">{{ row.shifts_refilled }} refilled</span>
+                  {% if row.shifts_released > row.shifts_refilled %}
+                  <br><span class="badge-soft red">{{ row.shifts_released - row.shifts_refilled }} gap(s)</span>
+                  {% endif %}
+                {% else %}<span class="text-secondary">-</span>{% endif %}
+              </td>
+              <td class="text-end">
+                {% if row.status in ('PENDING', 'APPROVED') and row.end_date >= today %}
+                <form method="post" action="{{ url_for('leave.cancel', request_id=row.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="submit">Cancel</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% if row.review_comment %}
+            <tr>
+              <td colspan="7" class="text-secondary border-top-0 pt-0" style="font-size:.7rem">
+                Comment: {{ row.review_comment }}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body">
+        <div class="empty-state">
+          <strong>No requests yet</strong>
+          Use the form to request time off. Your manager and HR are notified as
+          soon as you submit.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>HospitalPortal.linkDateRange("start_date", "end_date");</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+# Intelligent Hospital Workforce Scheduling System
+#
+#   1. Create .env next to this file (see .env.example), with at minimum:
+#        SECRET_KEY=<python -c "import secrets; print(secrets.token_hex(32))">
+#   2. docker compose up -d
+#   3. Open http://<server>:8000 and sign in as TH-ADM-001 / Password123
+
+services:
+  portal:
+    build: .
+    image: ihwss:latest
+    container_name: ihwss
+    restart: unless-stopped
+
+    # Optional so that "docker compose config" works before .env exists.
+    # The entrypoint still refuses to start without a real SECRET_KEY.
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      FLASK_ENV: production
+      # Must match the hospital's timezone. Ghana is GMT year-round.
+      TZ: ${TZ:-Africa/Accra}
+      # false when served over plain http://, true once TLS is in front.
+      # Set wrongly on http:// the login POST fails with a 400 and nothing
+      # in the interface explains why. See DEPLOYMENT.md.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      # true only when nginx, Caddy or Traefik sits in front, so the audit
+      # trail records the real client address instead of the proxy's.
+      BEHIND_PROXY: ${BEHIND_PROXY:-false}
+
+    ports:
+      - "${PORT:-8000}:8000"
+
+    volumes:
+      # The database is one SQLite file. A named volume keeps it across
+      # restarts and image rebuilds. Back it up with:
+      #   docker compose cp portal:/app/instance/hospital.db ./backup.db
+      - portal-data:/app/instance
+
+volumes:
+  portal-data:

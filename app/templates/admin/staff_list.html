@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block page_title %}Staff accounts{% endblock %}
+{% block heading %}Staff accounts{% endblock %}
+{% block subheading %}{{ staff_list|length }} account(s){% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-primary btn-sm flex-shrink-0" href="{{ url_for('admin.create_staff') }}">Add staff member</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end filters">
+      <div class="col-md-4">
+        <label for="department_id" class="form-label small fw-semibold mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id"
+                onchange="this.form.submit()">
+          <option value="">All departments</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {{ 'selected' if selected == dept.id }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary btn-sm w-100" type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th><th>Staff number</th><th>Department</th><th>Job title</th>
+          <th>Portal role</th><th>Contact</th><th>Nights</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for staff in staff_list %}
+        <tr class="{{ 'opacity-50' if not staff.is_active }}">
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar avatar-sm">{{ staff.initials }}</span>
+              <div>
+                <a href="{{ url_for('profile.view', staff_id=staff.id) }}" class="fw-semibold text-decoration-none">
+                  {{ staff.full_name }}</a>
+                {% if staff.is_manager %}<span class="badge-soft amber">Manager</span>{% endif %}
+                {% if staff.must_change_password %}
+                <div class="text-warning" style="font-size:.68rem">Password reset pending</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="font-mono">{{ staff.staff_no }}</td>
+          <td>{{ staff.department.name }}</td>
+          <td class="text-secondary">{{ staff.job_title or '-' }}</td>
+          <td><span class="badge-soft brand">{{ staff.role_label }}</span></td>
+          <td style="font-size:.7rem">
+            <div class="text-break">{{ staff.email }}</div>
+            <span class="font-mono text-secondary">{{ staff.phone or 'No phone' }}</span>
+          </td>
+          <td>
+            {% if staff.can_work_nights %}<span class="badge-soft green">Yes</span>
+            {% else %}<span class="badge-soft grey">No</span>{% endif %}
+          </td>
+          <td>
+            {% if staff.is_active %}<span class="badge-soft green">Active</span>
+            {% else %}<span class="badge-soft red">Inactive</span>{% endif %}
+          </td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-outline-secondary btn-sm py-0 px-2"
+               href="{{ url_for('admin.edit_staff', staff_id=staff.id) }}">Edit</a>
+            {% if staff.id != current_user.id %}
+            <form method="post" action="{{ url_for('admin.toggle_staff', staff_id=staff.id) }}"
+                  class="d-inline"
+                  data-confirm="Changing this account's status will release or restore their future shifts. Continue?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="submit">
+                {{ 'Deactivate' if staff.is_active else 'Reactivate' }}
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer small text-secondary">
+    Deactivating an account releases every future shift that person holds and
+    re-optimises the affected rosters, so nothing is left silently uncovered.
+  </div>
+</div>
+{% endblock %}

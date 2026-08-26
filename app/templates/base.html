@@ -1,0 +1,131 @@
+{%- macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {%- if name == 'home' -%}<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
+  {%- elif name == 'calendar' -%}<rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 10h18M8 2.5v4M16 2.5v4"/>
+  {%- elif name == 'grid' -%}<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+  {%- elif name == 'sparkle' -%}<path d="M12 3v18M3 12h18"/><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>
+  {%- elif name == 'clock' -%}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+  {%- elif name == 'leaf' -%}<path d="M4 20c0-8 6-14 16-15 0 10-5 15-11 15a5 5 0 0 1-5-5Z"/><path d="M9 15c2-3 5-5 8-6"/>
+  {%- elif name == 'chart' -%}<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+  {%- elif name == 'shield' -%}<path d="M12 3l7.5 3v5.5c0 4.6-3.1 8.6-7.5 9.9-4.4-1.3-7.5-5.3-7.5-9.9V6Z"/><path d="m9 12 2 2 4-4"/>
+  {%- elif name == 'bell' -%}<path d="M18 8.5a6 6 0 1 0-12 0c0 6-2 7.5-2 7.5h16s-2-1.5-2-7.5Z"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/>
+  {%- elif name == 'users' -%}<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5"/><path d="M17 5.2a3.5 3.5 0 0 1 0 6.6M18.5 20c0-2.6-1-4.3-2.5-5.2"/>
+  {%- elif name == 'settings' -%}<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/>
+  {%- elif name == 'send' -%}<path d="M21 3 3 10.5l7 3 3 7L21 3Z"/>
+  {%- elif name == 'logout' -%}<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/>
+  {%- elif name == 'check' -%}<path d="m4 12.5 5 5L20 6.5"/>
+  {%- elif name == 'alert' -%}<path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17.5v.5"/>
+  {%- endif -%}
+</svg>
+{%- endmacro -%}
+{%- set ep = request.endpoint or '' -%}
+<title>{% block page_title %}{{ system_name }}{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+
+{% block layout %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <strong>{{ hospital_name }}</strong>
+      <span>{{ system_name }}</span>
+    </div>
+
+    <nav class="sidebar__nav">
+      <div class="sidebar__label">Overview</div>
+      <a class="nav-link {{ 'active' if ep.startswith('dashboard.') }}" href="{{ url_for('dashboard.index') }}">
+        {{ icon('home') }} Dashboard</a>
+      <a class="nav-link {{ 'active' if ep == 'schedule.my_schedule' }}" href="{{ url_for('schedule.my_schedule') }}">
+        {{ icon('calendar') }} My schedule</a>
+      <a class="nav-link {{ 'active' if ep.startswith('attendance.') and ep != 'attendance.register' }}" href="{{ url_for('attendance.index') }}">
+        {{ icon('clock') }} Attendance</a>
+      <a class="nav-link {{ 'active' if ep.startswith('leave.') and ep not in ('leave.pending', 'leave.report_absence') }}" href="{{ url_for('leave.my_leave') }}">
+        {{ icon('leaf') }} My leave</a>
+      <a class="nav-link {{ 'active' if ep == 'notifications.inbox' }}" href="{{ url_for('notifications.inbox') }}">
+        {{ icon('bell') }} Notifications
+        {% if unread_count %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ unread_count }}</span>{% endif %}
+      </a>
+    </nav>
+
+    {% if current_user.is_authenticated and (current_user.has_oversight or current_user.is_manager) %}
+    <nav class="sidebar__nav">
+      <div class="sidebar__label">Scheduling</div>
+      <a class="nav-link {{ 'active' if ep == 'schedule.generate' }}" href="{{ url_for('schedule.generate') }}">
+        {{ icon('sparkle') }} Generate roster</a>
+      <a class="nav-link {{ 'active' if ep == 'schedule.department_roster' }}" href="{{ url_for('schedule.department_roster', department_id=current_user.department_id) }}">
+        {{ icon('grid') }} Department roster</a>
+      <a class="nav-link {{ 'active' if ep == 'leave.pending' }}" href="{{ url_for('leave.pending') }}">
+        {{ icon('check') }} Leave approvals</a>
+      <a class="nav-link {{ 'active' if ep == 'leave.report_absence' }}" href="{{ url_for('leave.report_absence') }}">
+        {{ icon('alert') }} Report absence</a>
+      <a class="nav-link {{ 'active' if ep == 'attendance.register' }}" href="{{ url_for('attendance.register') }}">
+        {{ icon('clock') }} Attendance register</a>
+    </nav>
+
+    <nav class="sidebar__nav">
+      <div class="sidebar__label">Insight</div>
+      <a class="nav-link {{ 'active' if ep == 'reports.analytics_dashboard' }}" href="{{ url_for('reports.analytics_dashboard') }}">
+        {{ icon('chart') }} Analytics</a>
+      {% if current_user.has_oversight %}
+      <a class="nav-link {{ 'active' if ep == 'reports.audit_trail' }}" href="{{ url_for('reports.audit_trail') }}">
+        {{ icon('shield') }} Audit trail</a>
+      <a class="nav-link {{ 'active' if ep == 'notifications.outbox' }}" href="{{ url_for('notifications.outbox') }}">
+        {{ icon('send') }} Message outbox</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+
+    <nav class="sidebar__nav">
+      <div class="sidebar__label">People</div>
+      <a class="nav-link {{ 'active' if ep == 'profile.directory' }}" href="{{ url_for('profile.directory') }}">
+        {{ icon('users') }} Staff directory</a>
+      {% if current_user.is_authenticated and current_user.has_oversight %}
+      <a class="nav-link {{ 'active' if ep.startswith('admin.') }}" href="{{ url_for('admin.index') }}">
+        {{ icon('settings') }} Administration</a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar__foot">
+      <a class="sidebar__who" href="{{ url_for('profile.me') }}">
+        <span class="avatar">{{ current_user.initials }}</span>
+        <span>
+          <strong>{{ current_user.full_name }}</strong>
+          <small>{{ current_user.role_label }}</small>
+        </span>
+      </a>
+      <a class="nav-link" href="{{ url_for('auth.logout') }}">{{ icon('logout') }} Sign out</a>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="flex-grow-1 min-w-0">
+        <h1>{% block heading %}Dashboard{% endblock %}</h1>
+        <p>{% block subheading %}{% endblock %}</p>
+      </div>
+      {% block topbar_actions %}{% endblock %}
+    </header>
+
+    <div class="app-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'danger' else category }} alert-dismissible fade show py-2 small" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+<script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block page_title %}Staff directory{% endblock %}
+{% block heading %}Staff directory{% endblock %}
+{% block subheading %}{{ total }} active staff across {{ grouped|length }} department(s){% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end filters">
+      <div class="col-md-4">
+        <label for="department_id" class="form-label small fw-semibold mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id"
+                onchange="this.form.submit()">
+          <option value="">All departments</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {{ 'selected' if selected == dept.id }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary btn-sm w-100" type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% for department, members in grouped.items() %}
+<div class="card mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center gap-2">
+    <div class="flex-grow-1">
+      <h2 class="h6 mb-0 fw-semibold">{{ department.name }}</h2>
+      <p class="mb-0 small text-secondary">
+        {{ members|length }} staff
+        {%- if department.manager %} &middot; managed by {{ department.manager.full_name }}{% endif %}
+        {%- if department.location %} &middot; {{ department.location }}{% endif %}
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm"
+       href="{{ url_for('schedule.department_roster', department_id=department.id) }}">View roster</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th><th>Staff number</th><th>Job title</th><th>Portal role</th>
+          <th>Email</th><th>Phone</th><th>Night duty</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr>
+          <td>
+            <a class="d-flex align-items-center gap-2 text-decoration-none text-body"
+               href="{{ url_for('profile.view', staff_id=member.id) }}">
+              <span class="avatar avatar-sm">{{ member.initials }}</span>
+              <span>
+                <span class="fw-semibold">{{ member.full_name }}</span>
+                {% if member.is_manager %}<span class="badge-soft amber">Manager</span>{% endif %}
+              </span>
+            </a>
+          </td>
+          <td class="font-mono">{{ member.staff_no }}</td>
+          <td class="text-secondary">{{ member.job_title or '-' }}</td>
+          <td><span class="badge-soft brand">{{ member.role_label }}</span></td>
+          <td class="text-break">{{ member.email }}</td>
+          <td class="font-mono">{{ member.phone or '-' }}</td>
+          <td>
+            {% if member.can_work_nights %}<span class="badge-soft green">Yes</span>
+            {% else %}<span class="badge-soft grey">No</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state"><strong>No staff found</strong>Try a different department filter.</div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block page_title %}{{ department.name }} settings{% endblock %}
+{% block heading %}{{ department.name }}{% endblock %}
+{% block subheading %}Manager and staffing requirements &middot; {{ members|length }} active staff{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <h2 class="h6 mb-0 fw-semibold">Roster manager</h2>
+          <p class="mb-0 small text-secondary">The one person who generates and publishes this roster.</p>
+        </div>
+        <div class="card-body">
+          <label for="manager_id" class="form-label small fw-semibold">Manager</label>
+          <select class="form-select" id="manager_id" name="manager_id" required>
+            {% for member in members %}
+            <option value="{{ member.id }}" {{ 'selected' if department.manager_id == member.id }}>
+              {{ member.full_name }} - {{ member.job_title or member.role_label }}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">The manager can still be rostered onto shifts like anyone else.</div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <h2 class="h6 mb-0 fw-semibold">Minimum staffing per shift</h2>
+          <p class="mb-0 small text-secondary">Set a shift to zero if this department does not run it.</p>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 small">
+            <thead class="table-light">
+              <tr><th>Shift</th><th>Window</th><th style="width:130px">Weekday</th><th style="width:130px">Weekend</th></tr>
+            </thead>
+            <tbody>
+              {% for shift in shifts %}
+              {% set requirement = requirements.get(shift.id) %}
+              <tr>
+                <td class="fw-semibold">{{ shift.short_name }}</td>
+                <td class="font-mono text-secondary">{{ shift.window_label }}</td>
+                <td>
+                  <input type="number" class="form-control form-control-sm" name="min_{{ shift.id }}"
+                         min="0" max="20" value="{{ requirement.min_staff if requirement else 0 }}">
+                </td>
+                <td>
+                  <input type="number" class="form-control form-control-sm" name="weekend_{{ shift.id }}"
+                         min="0" max="20" value="{{ requirement.weekend_min_staff if requirement else 0 }}">
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer small text-secondary">
+          This department currently requires <strong>{{ weekly_demand }}</strong>
+          staff-shifts per week across {{ members|length }} staff.
+          {% if members|length %}
+          That is about {{ '%.1f'|format(weekly_demand / members|length) }} shifts each.
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save requirements</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('admin.index') }}">Back to administration</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Feasibility check</h3></div>
+      <div class="card-body">
+        {% set per_person = (weekly_demand / members|length) if members|length else 0 %}
+        {% if per_person > 6 %}
+        <div class="alert alert-danger py-2 px-3 small mb-2">
+          <strong>Not achievable.</strong>
+          {{ '%.1f'|format(per_person) }} shifts per person per week exceeds the
+          maximum of {{ config.MAX_CONSECUTIVE_DAYS }} working days. The engine
+          will report coverage gaps. Reduce the minimums or add staff.
+        </div>
+        {% elif per_person > 5 %}
+        <div class="alert alert-warning py-2 px-3 small mb-2">
+          <strong>Very tight.</strong>
+          {{ '%.1f'|format(per_person) }} shifts per person per week leaves almost
+          no slack for leave or absence. Expect gaps when someone is off.
+        </div>
+        {% else %}
+        <div class="alert alert-success py-2 px-3 small mb-2">
+          <strong>Workable.</strong>
+          {{ '%.1f'|format(per_person) }} shifts per person per week leaves room
+          for the engine to balance nights and weekends and to absorb leave.
+        </div>
+        {% endif %}
+
+        <p class="text-secondary mb-0" style="font-size:.72rem">
+          A staff member can work at most {{ config.MAX_CONSECUTIVE_DAYS }} days
+          in a row and {{ config.MAX_WEEKLY_HOURS }} hours a week, with at least
+          {{ config.MIN_DAYS_OFF_PER_WEEK }} day(s) off.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Members</h3></div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light"><tr><th>Name</th><th>Role</th><th>Nights</th></tr></thead>
+          <tbody>
+            {% for member in members %}
+            <tr>
+              <td>
+                <a href="{{ url_for('profile.view', staff_id=member.id) }}" class="fw-semibold text-decoration-none">
+                  {{ member.full_name }}</a>
+                {% if department.manager_id == member.id %}
+                <span class="badge-soft amber">Manager</span>
+                {% endif %}
+              </td>
+              <td class="text-secondary" style="font-size:.7rem">{{ member.job_title or member.role_label }}</td>
+              <td>
+                {% if member.can_work_nights %}<span class="badge-soft green">Yes</span>
+                {% else %}<span class="badge-soft grey">No</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block page_title %}My schedule{% endblock %}
+{% block heading %}My schedule{% endblock %}
+{% block subheading %}{{ start|d('%d %b') }} to {{ end|d('%d %b %Y') }} &middot; {{ current_user.department.name }}{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2 flex-shrink-0">
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('schedule.my_schedule', week=prev_week) }}">&larr; Prev</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('schedule.my_schedule') }}">This week</a>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('schedule.my_schedule', week=next_week) }}">Next &rarr;</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-brand">
+      <div class="stat-tile__label">Shifts</div>
+      <div class="stat-tile__value">{{ assignments|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Hours</div>
+      <div class="stat-tile__value">{{ total_hours }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Nights</div>
+      <div class="stat-tile__value">{{ assignments | selectattr('is_night') | list | length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Weekend duty</div>
+      <div class="stat-tile__value">{{ assignments | selectattr('falls_on_weekend') | list | length }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex flex-wrap align-items-center gap-2">
+    <div class="flex-grow-1">
+      <h2 class="h6 mb-0 fw-semibold">Week view</h2>
+      <p class="mb-0 small text-secondary">
+        {% if roster %}
+          Published by {{ roster.published_by.full_name }} on {{ roster.published_at|dt }}.
+        {% else %}
+          This week's roster has not been published yet.
+        {% endif %}
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm"
+       href="{{ url_for('schedule.department_roster', department_id=current_user.department_id, week=start.isoformat()) }}">
+      View whole department</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr><th>Day</th><th>Date</th><th>Shift</th><th>Start</th><th>End</th>
+            <th class="text-end">Hours</th><th>Type</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        {% for day in dates %}
+        {% set row = by_date.get(day) %}
+        <tr>
+          <td class="fw-semibold">{{ day.strftime('%A') }}</td>
+          <td class="text-secondary text-nowrap">{{ day|d('%d %b') }}</td>
+          {% if row %}
+          <td><span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span></td>
+          <td class="font-mono">{{ row.start_at|dt('%H:%M') }}</td>
+          <td class="font-mono">
+            {{ row.end_at|dt('%H:%M') }}
+            {%- if row.is_night %} <span class="text-secondary" style="font-size:.68rem">(next day)</span>{% endif %}
+          </td>
+          <td class="text-end">{{ row.shift.duration_hours }}</td>
+          <td>
+            {% if row.status == 'REPLACEMENT' %}
+              <span class="badge-soft amber">Covering</span>
+            {% else %}
+              <span class="badge-soft green">Scheduled</span>
+            {% endif %}
+          </td>
+          <td class="text-secondary">{{ row.change_reason or '' }}</td>
+          {% else %}
+          <td colspan="6" class="text-secondary">Off duty</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if assignments | selectattr('is_night') | list | length %}
+  <div class="card-footer small text-secondary">
+    After a night shift you are not scheduled for the following morning or
+    afternoon. The engine enforces an {{ config.MIN_REST_HOURS }}-hour minimum
+    rest period between shifts.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

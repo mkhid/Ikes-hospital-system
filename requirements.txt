@@ -1,0 +1,29 @@
+# Web framework and templating (Jinja2 and Werkzeug come with Flask)
+Flask==3.1.3
+
+# Data layer
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.48
+Flask-Migrate==4.1.0
+alembic==1.18.4
+
+# Authentication, sessions and CSRF (WTForms is required by Flask-WTF)
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+Flask-WTF==1.2.2
+WTForms==3.2.1
+
+# Configuration
+python-dotenv==1.2.2
+
+# PDF report generation
+reportlab==4.4.10
+
+# HTTP client, used only by the live SMS gateway adapter
+httpx==0.28.1
+
+# --- Front end -------------------------------------------------------------
+# Bootstrap 5.3.3 and Chart.js 4.4.4 are vendored into app/static/vendor/ and
+# served by Flask. They are NOT pip packages and need no install step: the
+# portal has no npm dependency, no bundler and no node_modules, and it makes no
+# external requests, so it runs with no internet connection.

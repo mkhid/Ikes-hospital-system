@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block layout %}
+{% if current_user.is_authenticated %}
+  {{ super() }}
+{% else %}
+<div class="container py-5">
+  <div class="text-center py-5">
+    <div class="fw-bold text-body-tertiary lh-1" style="font-size:4.5rem">{{ code }}</div>
+    <h1 class="h4 mt-3 fw-semibold">{{ title }}</h1>
+    <p class="text-secondary mt-2 mx-auto" style="max-width:52ch">{{ message }}</p>
+    <a class="btn btn-primary mt-3" href="{{ url_for('auth.login') }}">Go to sign in</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block heading %}{{ title }}{% endblock %}
+{% block subheading %}Error {{ code }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <div class="text-center py-5">
+      <div class="fw-bold text-body-tertiary lh-1" style="font-size:4.5rem">{{ code }}</div>
+      <h1 class="h4 mt-3 fw-semibold">{{ title }}</h1>
+      <p class="text-secondary mt-2 mx-auto" style="max-width:52ch">{{ message }}</p>
+      <a class="btn btn-primary mt-3" href="{{ url_for('dashboard.index') }}">Back to dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

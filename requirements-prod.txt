@@ -1,0 +1,10 @@
+# Production server dependencies, on top of requirements.txt:
+#
+#   pip install -r requirements.txt -r requirements-prod.txt
+#
+# Waitress is the recommended choice: pure Python, and it runs on Windows and
+# Linux alike. Gunicorn is faster under load but is Linux-only; install it
+# instead of Waitress if the server is Linux and you expect real traffic.
+
+waitress==3.0.2
+# gunicorn==23.0.0   ; uncomment on Linux if you prefer it to Waitress

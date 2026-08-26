@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block page_title %}Reassign shift{% endblock %}
+{% block heading %}Reassign shift{% endblock %}
+{% block subheading %}
+  {{ assignment.shift.short_name }} &middot; {{ assignment.work_date|d('%A %d %B %Y') }} &middot; {{ department.name }}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Current assignment</h2></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-4 text-secondary fw-normal">Shift</dt>
+          <dd class="col-8"><strong>{{ assignment.shift.name }}</strong> &middot;
+              {{ assignment.shift.window_label }} ({{ assignment.shift.duration_hours }}h)</dd>
+
+          <dt class="col-4 text-secondary fw-normal">Date</dt>
+          <dd class="col-8">{{ assignment.work_date|d('%A %d %B %Y') }}
+              {% if assignment.falls_on_weekend %}<span class="badge-soft amber">Weekend</span>{% endif %}</dd>
+
+          <dt class="col-4 text-secondary fw-normal">Currently</dt>
+          <dd class="col-8">
+            {% if assignment.staff %}
+              {{ assignment.staff.full_name }}
+              <span class="text-secondary">({{ assignment.staff.staff_no }})</span>
+            {% else %}<span class="badge-soft red">Unfilled</span>{% endif %}
+          </dd>
+
+          <dt class="col-4 text-secondary fw-normal">Status</dt>
+          <dd class="col-8">
+            <span class="badge-soft {{ {'SCHEDULED':'green','REPLACEMENT':'amber','UNFILLED':'red','VACATED':'grey'}.get(assignment.status,'grey') }}">
+              {{ assignment.status|titleise }}</span>
+          </dd>
+
+          {% if assignment.change_reason %}
+          <dt class="col-4 text-secondary fw-normal">Note</dt>
+          <dd class="col-8 text-secondary">{{ assignment.change_reason }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Assign to</h2></div>
+      <div class="card-body">
+        {% if eligible %}
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="staff_id" class="form-label small fw-semibold">Eligible staff, fairest first</label>
+            <select class="form-select" id="staff_id" name="staff_id" required>
+              {% for staff in eligible %}
+              <option value="{{ staff.id }}">{{ staff.full_name }} - {{ staff.job_title or staff.role_label }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Only staff who pass every hard constraint appear here, ordered by
+              who is carrying the lightest share of this kind of duty.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label small fw-semibold">Reason for the change</label>
+            <input type="text" class="form-control" id="reason" name="reason"
+                   placeholder="e.g. Swap agreed with staff member" maxlength="200">
+          </div>
+
+          <div class="alert alert-light border py-2 px-3 small">
+            The staff member you assign is notified immediately by in-app message,
+            email and SMS if this roster is already published. The override is
+            written to the audit trail with your name against it.
+          </div>
+
+          <button class="btn btn-primary w-100" type="submit">Confirm reassignment</button>
+        </form>
+        {% else %}
+        <div class="empty-state">
+          <strong>No eligible staff</strong>
+          Everyone in {{ department.name }} would breach at least one hard
+          constraint by taking this shift. See the reasons alongside.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Why the others cannot take it</h2>
+        <p class="mb-0 small text-secondary">The constraint checker's verdict on every remaining colleague.</p>
+      </div>
+      {% if blocked %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Staff</th><th>Role</th><th>Blocking constraint</th></tr>
+          </thead>
+          <tbody>
+            {% for row in blocked %}
+            <tr>
+              <td class="fw-semibold">{{ row.staff.full_name }}</td>
+              <td class="text-secondary">{{ row.staff.job_title or row.staff.role_label }}</td>
+              <td>
+                {% for reason in row.reasons %}
+                <span class="badge-soft red me-1 mb-1">{{ reason }}</span>
+                {% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body">
+        <div class="empty-state">
+          <strong>Everyone is eligible</strong>No constraints block any colleague from this shift.
+        </div>
+      </div>
+      {% endif %}
+      <div class="card-footer small text-secondary">
+        These rules cannot be overridden from this screen. Changing them is a
+        policy decision made in Administration.
+      </div>
+    </div>
+
+    <a class="btn btn-outline-secondary mt-3"
+       href="{{ url_for('schedule.department_roster', department_id=department.id, week=assignment.roster.week_start.isoformat()) }}">
+      Back to the roster</a>
+  </div>
+</div>
+{% endblock %}

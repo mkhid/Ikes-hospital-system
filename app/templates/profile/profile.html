@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block page_title %}{{ staff.full_name }}{% endblock %}
+{% block heading %}{{ staff.full_name }}{% endblock %}
+{% block subheading %}{{ staff.job_title or staff.role_label }} &middot; {{ staff.department.name }} &middot; {{ staff.staff_no }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex gap-3 align-items-start mb-3">
+          <span class="avatar avatar-lg">{{ staff.initials }}</span>
+          <div>
+            <h2 class="h5 mb-1 fw-semibold">{{ staff.full_name }}</h2>
+            <div class="text-secondary small">{{ staff.job_title or staff.role_label }}</div>
+            <div class="mt-2 d-flex flex-wrap gap-1">
+              <span class="badge-soft brand">{{ staff.role_label }}</span>
+              {% if staff.is_manager %}<span class="badge-soft amber">Department manager</span>{% endif %}
+              {% if not staff.is_active %}<span class="badge-soft red">Inactive</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <dl class="row small mb-0">
+          <dt class="col-5 text-secondary fw-normal">Staff number</dt><dd class="col-7 font-mono">{{ staff.staff_no }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Department</dt><dd class="col-7">{{ staff.department.name }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Email</dt><dd class="col-7 text-break">{{ staff.email }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Phone</dt><dd class="col-7">{{ staff.phone or 'Not on file' }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Qualification</dt><dd class="col-7">{{ staff.qualification or 'Not recorded' }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Employment</dt><dd class="col-7">{{ staff.employment_type|titleise }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Joined</dt><dd class="col-7">{{ staff.date_joined|d }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Night duty</dt>
+          <dd class="col-7">
+            {% if staff.can_work_nights %}<span class="badge-soft green">Cleared</span>
+            {% else %}<span class="badge-soft grey">Not cleared</span>{% endif %}
+          </dd>
+          <dt class="col-5 text-secondary fw-normal">Preferred shift</dt>
+          <dd class="col-7">{{ staff.preferred_shift|titleise if staff.preferred_shift else 'No preference' }}</dd>
+          <dt class="col-5 text-secondary fw-normal">Last sign-in</dt><dd class="col-7">{{ staff.last_login_at|dt }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if editable %}
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Update my details</h3></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('profile.update') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="phone" class="form-label small fw-semibold">Mobile number</label>
+            <input type="tel" class="form-control" id="phone" name="phone"
+                   value="{{ staff.phone or '' }}" placeholder="0244000000">
+            <div class="form-text">Used for SMS notifications about your roster.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="preferred_shift" class="form-label small fw-semibold">Preferred shift</label>
+            <select class="form-select" id="preferred_shift" name="preferred_shift">
+              <option value="NONE" {{ 'selected' if not staff.preferred_shift }}>No preference</option>
+              <option value="MORNING" {{ 'selected' if staff.preferred_shift == 'MORNING' }}>Morning</option>
+              <option value="AFTERNOON" {{ 'selected' if staff.preferred_shift == 'AFTERNOON' }}>Afternoon</option>
+              <option value="NIGHT" {{ 'selected' if staff.preferred_shift == 'NIGHT' }}>Night</option>
+            </select>
+            <div class="form-text">
+              Treated as a soft preference. It is honoured where coverage and
+              fairness allow, never at the cost of a hard constraint.
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit">Save changes</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('auth.change_password') }}">Change password</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-8">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-xl-3">
+        <div class="stat-tile is-brand">
+          <div class="stat-tile__label">Shifts this week</div>
+          <div class="stat-tile__value">{{ stats.week_shifts }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+          <div class="stat-tile__label">Hours</div>
+          <div class="stat-tile__value">{{ stats.week_hours }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+          <div class="stat-tile__label">Nights</div>
+          <div class="stat-tile__value">{{ stats.week_nights }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="stat-tile is-blue">
+          <div class="stat-tile__label">Leave days</div>
+          <div class="stat-tile__value">{{ stats.leave_days }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Upcoming shifts</h3></div>
+      {% if upcoming %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light"><tr><th>Date</th><th>Shift</th><th>Window</th><th>Type</th></tr></thead>
+          <tbody>
+            {% for row in upcoming %}
+            <tr>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td><span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span></td>
+              <td class="font-mono">{{ row.shift.window_label }}</td>
+              <td>{% if row.status == 'REPLACEMENT' %}<span class="badge-soft amber">Cover</span>
+                  {% else %}<span class="text-secondary">Scheduled</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body"><div class="empty-state"><strong>No published shifts ahead</strong></div></div>
+      {% endif %}
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Recent attendance</h3></div>
+      {% if recent_attendance %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Date</th><th>In</th><th>Out</th><th class="text-end">On site</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for row in recent_attendance %}
+            <tr>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td class="font-mono">{{ row.sign_in_at|dt('%H:%M') }}</td>
+              <td class="font-mono">{{ row.sign_out_at|dt('%H:%M') if row.sign_out_at else '-' }}</td>
+              <td class="text-end">{{ row.worked_minutes|duration }}</td>
+              <td>
+                <span class="badge-soft {{ {'ON_DUTY':'green','TEMPORARILY_OUT':'amber','COMPLETED':'blue','ABSENT':'red'}.get(row.status,'grey') }}">
+                  {{ row.status|titleise }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body"><div class="empty-state"><strong>No attendance recorded</strong></div></div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Leave history</h3></div>
+      {% if leave_rows %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Type</th><th>Period</th><th class="text-end">Days</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for row in leave_rows %}
+            <tr>
+              <td class="fw-semibold">{{ row.type_label }}</td>
+              <td class="text-nowrap">{{ row.period_label }}</td>
+              <td class="text-end">{{ row.days }}</td>
+              <td>
+                <span class="badge-soft {{ {'APPROVED':'green','PENDING':'amber','REJECTED':'red','CANCELLED':'grey'}[row.status] }}">
+                  {{ row.status|titleise }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body"><div class="empty-state"><strong>No leave on record</strong></div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

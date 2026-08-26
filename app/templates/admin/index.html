@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block page_title %}Administration{% endblock %}
+{% block heading %}Administration{% endblock %}
+{% block subheading %}Departments, accounts, shift definitions and scheduling policy{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-primary btn-sm flex-shrink-0" href="{{ url_for('admin.create_staff') }}">Add staff member</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-brand">
+      <div class="stat-tile__label">Active staff</div>
+      <div class="stat-tile__value">{{ staff_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Departments</div>
+      <div class="stat-tile__value">{{ departments|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Shift definitions</div>
+      <div class="stat-tile__value">{{ shifts|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-amber' if inactive_count }}">
+      <div class="stat-tile__label">Deactivated accounts</div>
+      <div class="stat-tile__value">{{ inactive_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">Departments</h2>
+          <p class="mb-0 small text-secondary">Each department owns its roster and has one manager who publishes it.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.staff_list') }}">All staff accounts</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Department</th><th>Code</th><th>Manager</th>
+              <th class="text-end">Staff</th><th>Operating model</th>
+              <th>Required per shift</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dept in departments %}
+            <tr>
+              <td class="fw-semibold">{{ dept.name }}
+                <div class="text-secondary" style="font-size:.68rem">{{ dept.location or '' }}</div>
+              </td>
+              <td class="font-mono">{{ dept.code }}</td>
+              <td>
+                {% if dept.manager %}
+                  {{ dept.manager.full_name }}
+                  <div class="text-secondary" style="font-size:.68rem">{{ dept.manager.staff_no }}</div>
+                {% else %}<span class="badge-soft red">Not set</span>{% endif %}
+              </td>
+              <td class="text-end">{{ dept.headcount }}</td>
+              <td class="text-secondary">{{ dept.operating_model|titleise }}</td>
+              <td>
+                {% for requirement in dept.requirements|sort(attribute='shift.sort_order') %}
+                  {% if requirement.min_staff %}
+                  <span class="badge-soft grey">
+                    {{ requirement.shift.short_name }} {{ requirement.min_staff }}
+                    {%- if requirement.weekend_min_staff != requirement.min_staff %}/{{ requirement.weekend_min_staff }}{% endif %}
+                  </span>
+                  {% endif %}
+                {% endfor %}
+              </td>
+              <td class="text-end">
+                <a class="btn btn-outline-secondary btn-sm py-0 px-2"
+                   href="{{ url_for('admin.department_settings', department_id=dept.id) }}">Configure</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer small text-secondary">
+        Weekday and weekend minimums are shown as <code>weekday/weekend</code>
+        where they differ. A shift with no requirement is not run by that department.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Shift definitions</h2>
+        <p class="mb-0 small text-secondary">The three daily windows every roster is built from.</p>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Shift</th><th>Code</th><th>Start</th><th>End</th><th class="text-end">Duration</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            {% for shift in shifts %}
+            <tr>
+              <td class="fw-semibold">{{ shift.name }}</td>
+              <td class="font-mono">{{ shift.code }}</td>
+              <td class="font-mono">{{ shift.start_time.strftime('%H:%M') }}</td>
+              <td class="font-mono">{{ shift.end_time.strftime('%H:%M') }}
+                {%- if shift.crosses_midnight %} <span class="text-secondary">+1 day</span>{% endif %}</td>
+              <td class="text-end">{{ shift.duration_hours }}h</td>
+              <td class="text-secondary">
+                {% if shift.crosses_midnight %}
+                  Crosses midnight. The {{ policy.min_rest_hours }}-hour rest rule
+                  blocks the next morning and afternoon shift for anyone who works it.
+                {% else %}Same-day shift.{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Scheduling policy</h2>
+        <p class="mb-0 small text-secondary">The hard constraints the engine enforces.</p>
+      </div>
+      <div class="card-body">
+        <dl class="row small mb-0">
+          <dt class="col-6 text-secondary fw-normal">Minimum rest</dt>
+          <dd class="col-6 fw-semibold">{{ policy.min_rest_hours }} hours</dd>
+          <dt class="col-6 text-secondary fw-normal">Maximum week</dt>
+          <dd class="col-6 fw-semibold">{{ policy.max_weekly_hours }} hours</dd>
+          <dt class="col-6 text-secondary fw-normal">Consecutive days</dt>
+          <dd class="col-6 fw-semibold">{{ policy.max_consecutive_days }} maximum</dd>
+          <dt class="col-6 text-secondary fw-normal">Consecutive nights</dt>
+          <dd class="col-6 fw-semibold">{{ policy.max_consecutive_nights }} maximum</dd>
+          <dt class="col-6 text-secondary fw-normal">Days off</dt>
+          <dd class="col-6 fw-semibold">{{ policy.min_days_off_per_week }} per week</dd>
+        </dl>
+
+        <hr>
+
+        <dl class="row small mb-0">
+          <dt class="col-6 text-secondary fw-normal">Optimiser</dt>
+          <dd class="col-6">{{ policy.optimiser_iterations }} iterations</dd>
+          <dt class="col-6 text-secondary fw-normal">Late threshold</dt>
+          <dd class="col-6">{{ policy.grace_minutes }} minutes</dd>
+          <dt class="col-6 text-secondary fw-normal">Overtime from</dt>
+          <dd class="col-6">{{ policy.overtime_threshold }} min past end</dd>
+        </dl>
+
+        <div class="alert alert-light border py-2 px-3 small mt-3 mb-0">
+          Policy is set in the <code>.env</code> file so it is version-controlled
+          and applies consistently. Change a value there and restart the portal;
+          existing rosters are unaffected until regenerated.
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Notification delivery</h3></div>
+      <div class="card-body">
+        <dl class="row small mb-2">
+          <dt class="col-6 text-secondary fw-normal">Email backend</dt>
+          <dd class="col-6">
+            <span class="badge-soft {{ 'green' if policy.email_backend != 'console' else 'grey' }}">
+              {{ policy.email_backend|titleise }}</span>
+          </dd>
+          <dt class="col-6 text-secondary fw-normal">SMS backend</dt>
+          <dd class="col-6">
+            <span class="badge-soft {{ 'green' if policy.sms_backend != 'console' else 'grey' }}">
+              {{ policy.sms_backend|titleise }}</span>
+          </dd>
+        </dl>
+        <p class="text-secondary" style="font-size:.72rem">
+          Console backends compose every message in full and record it in the
+          outbox without contacting a gateway.
+        </p>
+        <a class="btn btn-outline-secondary btn-sm w-100" href="{{ url_for('notifications.outbox') }}">
+          Open the message outbox</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Governance</h3></div>
+      <div class="card-body">
+        <p class="small">
+          Every publication, override, approval and administrative change is
+          written to a hash-chained audit trail that can be verified at any time.
+        </p>
+        <a class="btn btn-outline-secondary btn-sm w-100" href="{{ url_for('reports.audit_trail') }}">
+          Open the audit trail</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

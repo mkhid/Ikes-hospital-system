@@ -1,0 +1,482 @@
+/* ==========================================================================
+   Intelligent Hospital Workforce Portal - theme layer over Bootstrap 5.3
+
+   Bootstrap provides the grid, components, forms, tables and utilities.
+   This file does three things only:
+
+     1. Retunes Bootstrap's colour tokens to the hospital palette.
+     2. Styles the sidebar shell, which Bootstrap has no component for.
+     3. Adds the domain pieces Bootstrap cannot express: the roster grid,
+        presence board, KPI tiles and activity timeline.
+
+   Loaded after bootstrap.min.css. No external requests: the portal works
+   with no internet connection.
+   ========================================================================== */
+
+/* ---------- 1. Palette ---------------------------------------------- */
+:root {
+  --brand: #0f766e;
+  --brand-dark: #0b5a54;
+  --brand-darker: #094a45;
+  --brand-soft: #e6f4f2;
+  --sidebar-bg: #0d2430;
+  --sidebar-ink: #c4d5e0;
+  --sidebar-muted: #7f9bab;
+
+  /* Bootstrap global tokens */
+  --bs-primary: #0f766e;
+  --bs-primary-rgb: 15, 118, 110;
+  --bs-link-color: #0f766e;
+  --bs-link-color-rgb: 15, 118, 110;
+  --bs-link-hover-color: #0b5a54;
+  --bs-body-color: #16202b;
+  --bs-body-bg: #f4f7fb;
+  --bs-border-color: #dde5ee;
+  --bs-secondary-color: #6b7c8f;
+  --bs-body-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --bs-body-font-size: 0.9rem;
+  --bs-border-radius: 0.6rem;
+  --bs-border-radius-sm: 0.4rem;
+}
+
+/* Bootstrap compiles component colours at build time, so each themed
+   component needs its own local variables redirected to the palette. */
+.btn-primary {
+  --bs-btn-bg: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: var(--brand-dark);
+  --bs-btn-hover-border-color: var(--brand-dark);
+  --bs-btn-active-bg: var(--brand-darker);
+  --bs-btn-active-border-color: var(--brand-darker);
+  --bs-btn-disabled-bg: var(--brand);
+  --bs-btn-disabled-border-color: var(--brand);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: var(--brand);
+  --bs-btn-hover-border-color: var(--brand);
+  --bs-btn-active-bg: var(--brand-dark);
+  --bs-btn-active-border-color: var(--brand-dark);
+}
+
+.text-bg-primary {
+  background-color: var(--brand) !important;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: #5eada6;
+  box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.16);
+}
+
+.form-check-input:checked {
+  background-color: var(--brand);
+  border-color: var(--brand);
+}
+
+.progress-bar {
+  background-color: var(--brand);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--brand);
+}
+
+.table {
+  --bs-table-hover-bg: #f6f9fc;
+}
+
+/* Softer, lower-contrast badges than Bootstrap's solid defaults, so a table
+   full of status chips stays readable rather than turning into confetti. */
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 50rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: #eef2f6;
+  color: #56657a;
+}
+.badge-soft.green { background: #e5f5ea; color: #157f3d; }
+.badge-soft.amber { background: #fdf1de; color: #a86107; }
+.badge-soft.red   { background: #fdeceb; color: #b3261e; }
+.badge-soft.blue  { background: #e8eefc; color: #1d4ed8; }
+.badge-soft.brand { background: var(--brand-soft); color: var(--brand-dark); }
+.badge-soft.grey  { background: #eef2f6; color: #64748b; }
+
+/* ---------- 2. Application shell ------------------------------------ */
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 238px;
+  flex: 0 0 238px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-ink);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar__brand {
+  padding: 1.1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.sidebar__brand strong {
+  color: #fff;
+  font-size: 0.9rem;
+  display: block;
+  line-height: 1.3;
+}
+/* The system name is long, so it wraps rather than being truncated or
+   shouted in uppercase, which is harder to read at this size. */
+.sidebar__brand span {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--sidebar-muted);
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+
+.sidebar__label {
+  font-size: 0.63rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6c8797;
+  padding: 0.85rem 0.6rem 0.35rem;
+  font-weight: 600;
+}
+
+.sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  margin: 0 0.5rem 1px;
+  border-radius: 0.4rem;
+  color: var(--sidebar-ink);
+  font-size: 0.83rem;
+  font-weight: 500;
+}
+.sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+.sidebar .nav-link.active {
+  background: var(--brand);
+  color: #fff;
+}
+.sidebar .nav-link svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  opacity: 0.9;
+}
+
+.sidebar__foot {
+  margin-top: auto;
+  padding: 0.7rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.sidebar__who {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.4rem 1.1rem;
+  text-decoration: none;
+}
+.sidebar__who small { color: var(--sidebar-muted); display: block; line-height: 1.2; }
+.sidebar__who strong { color: #fff; font-size: 0.8rem; display: block; line-height: 1.2; }
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--bs-border-color);
+  padding: 0.75rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+.topbar h1 { font-size: 1.12rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+.topbar p { margin: 0; font-size: 0.78rem; color: var(--bs-secondary-color); }
+
+.app-content {
+  padding: 1.25rem 1.4rem 3rem;
+  max-width: 1500px;
+  width: 100%;
+}
+
+/* ---------- 3. Domain components ------------------------------------ */
+
+/* KPI tile */
+.stat-tile {
+  background: #fff;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  padding: 0.85rem 0.95rem;
+  height: 100%;
+}
+.stat-tile__label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--bs-secondary-color);
+  font-weight: 650;
+}
+.stat-tile__value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-top: 0.15rem;
+  letter-spacing: -0.02em;
+}
+.stat-tile__meta { font-size: 0.75rem; color: #56657a; margin-top: 0.15rem; }
+.stat-tile.is-green .stat-tile__value { color: #157f3d; }
+.stat-tile.is-amber .stat-tile__value { color: #a86107; }
+.stat-tile.is-red   .stat-tile__value { color: #b3261e; }
+.stat-tile.is-blue  .stat-tile__value { color: #1d4ed8; }
+.stat-tile.is-brand .stat-tile__value { color: var(--brand); }
+
+/* Avatar */
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; flex: 0 0 30px;
+}
+.avatar.avatar-sm { width: 24px; height: 24px; flex: 0 0 24px; font-size: 0.62rem; }
+.avatar.avatar-lg { width: 54px; height: 54px; flex: 0 0 54px; font-size: 1.2rem; }
+
+/* Weekly roster grid */
+.roster-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.78rem;
+  min-width: 900px;
+}
+.roster-table th {
+  padding: 0.5rem 0.6rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--bs-border-color);
+  text-align: left;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--bs-secondary-color);
+  font-weight: 650;
+}
+.roster-table th.day-col { min-width: 120px; }
+.roster-table th.day-col span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--bs-body-color);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.roster-table th.is-weekend { background: #fdf6ec; }
+.roster-table td {
+  padding: 0.4rem;
+  border-bottom: 1px solid #eef3f8;
+  border-left: 1px solid #eef3f8;
+  vertical-align: top;
+}
+.roster-table td.is-weekend { background: #fffdf8; }
+.roster-table .shift-col {
+  background: #f8fafc;
+  font-weight: 600;
+  white-space: nowrap;
+  border-left: 0;
+  width: 135px;
+}
+.roster-table .shift-col small {
+  display: block;
+  font-weight: 400;
+  color: var(--bs-secondary-color);
+  font-size: 0.68rem;
+}
+
+.shift-chip {
+  display: block;
+  padding: 0.3rem 0.45rem;
+  margin-bottom: 0.25rem;
+  background: var(--brand-soft);
+  border-radius: 0.35rem;
+  border-left: 3px solid var(--brand);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+.shift-chip:last-child { margin-bottom: 0; }
+.shift-chip strong { display: block; font-weight: 600; color: var(--bs-body-color); }
+.shift-chip small { color: #56657a; font-size: 0.66rem; }
+.shift-chip a { color: inherit; text-decoration: none; }
+.shift-chip a:hover { text-decoration: underline; }
+.shift-chip.is-replacement { background: #fdf1de; border-left-color: #a86107; }
+.shift-chip.is-gap { background: #fdeceb; border-left-color: #b3261e; }
+.shift-chip.is-gap strong { color: #b3261e; }
+.shift-chip.is-me { box-shadow: inset 0 0 0 1.5px var(--brand); }
+
+.shift-empty {
+  display: block;
+  padding: 0.35rem 0.45rem;
+  color: #b8c4d1;
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+/* Presence board */
+.presence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+.presence-card {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+.presence-card strong { font-size: 0.78rem; font-weight: 600; line-height: 1.25; display: block; }
+.presence-card small { font-size: 0.68rem; color: var(--bs-secondary-color); }
+.presence-card.green { border-left: 3px solid #21a049; }
+.presence-card.amber { border-left: 3px solid #e08a17; }
+.presence-card.red   { border-left: 3px solid #d64545; }
+.presence-card.blue  { border-left: 3px solid #3b6fe0; }
+.presence-card.grey  { border-left: 3px solid #cbd5e1; }
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; flex: 0 0 8px;
+}
+.status-dot.green { background: #21a049; }
+.status-dot.amber { background: #e08a17; }
+.status-dot.red   { background: #d64545; }
+.status-dot.blue  { background: #3b6fe0; }
+.status-dot.grey  { background: #98a7b8; }
+
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #21a049; display: inline-block;
+  animation: pulse 2.2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.42; transform: scale(0.82); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+}
+
+/* Activity timeline */
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li {
+  padding: 0.5rem 0 0.5rem 1.1rem;
+  border-left: 2px solid var(--bs-border-color);
+  position: relative;
+  font-size: 0.78rem;
+}
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: -5px; top: 0.85rem;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid #fff;
+}
+.timeline li:last-child { border-left-color: transparent; }
+.timeline time { display: block; color: var(--bs-secondary-color); font-size: 0.68rem; }
+
+/* Empty state */
+.empty-state {
+  padding: 2.2rem 1.25rem;
+  text-align: center;
+  color: var(--bs-secondary-color);
+  font-size: 0.82rem;
+}
+.empty-state strong {
+  display: block;
+  color: #46586c;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Chart canvas wrapper: Chart.js needs a bounded parent to size against. */
+.chart-box { position: relative; width: 100%; }
+.chart-box.h-sm { height: 190px; }
+.chart-box.h-md { height: 250px; }
+.chart-box.h-lg { height: 310px; }
+
+/* Sign-in page */
+.auth-shell { min-height: 100vh; }
+.auth-aside {
+  background: linear-gradient(160deg, #0d2430 0%, #10403c 58%, #0f766e 100%);
+  color: #d5e5ea;
+  padding: 3rem 3.2rem;
+}
+.auth-aside h1 { color: #fff; font-size: 1.7rem; line-height: 1.28; letter-spacing: -0.02em; }
+.auth-aside p { color: #9fbcc6; font-size: 0.88rem; line-height: 1.65; max-width: 44ch; }
+.auth-aside li { color: #bcd4dc; font-size: 0.82rem; }
+.auth-aside li strong { color: #e3f2f0; }
+.auth-logo {
+  width: 44px; height: 44px; border-radius: 0.7rem;
+  background: var(--brand);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Bootstrap ships no min-width utility; flex children need this to truncate. */
+.min-w-0 { min-width: 0; }
+
+.font-mono {
+  font-family: "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.76rem;
+}
+
+/* ---------- Print --------------------------------------------------- */
+@media print {
+  .sidebar, .topbar, .btn, .no-print, form.filters { display: none !important; }
+  body { background: #fff; }
+  .card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; }
+  .app-content { padding: 0; }
+}
+
+/* ---------- Responsive ---------------------------------------------- */
+@media (max-width: 991.98px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; flex: none; height: auto; position: static; }
+  .sidebar__nav { display: flex; flex-wrap: wrap; gap: 2px; padding: 0.5rem; }
+  .sidebar__label { display: none; }
+  .sidebar .nav-link { margin: 0; padding: 0.35rem 0.6rem; font-size: 0.78rem; }
+  .sidebar__foot { display: flex; align-items: center; justify-content: space-between; }
+  .app-content { padding: 0.9rem; }
+}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block page_title %}Generate roster{% endblock %}
+{% block heading %}Generate a duty roster{% endblock %}
+{% block subheading %}The engine builds a compliant schedule, then balances it{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Roster parameters</h2></div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="department_id" class="form-label small fw-semibold">Department</label>
+            <select class="form-select" id="department_id" name="department_id" required>
+              {% for dept in departments %}
+              <option value="{{ dept.id }}" {{ 'selected' if dept.id == current_user.department_id }}>
+                {{ dept.name }} ({{ dept.active_members()|length }} staff)
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="week" class="form-label small fw-semibold">Week commencing</label>
+            <input type="date" class="form-control" id="week" name="week"
+                   value="{{ default_week.isoformat() }}" required>
+            <div class="form-text">
+              Any date in the target week is accepted; the roster always runs
+              Monday to Sunday.
+            </div>
+          </div>
+
+          <div class="alert alert-light border py-2 px-3 small">
+            Regenerating replaces an existing draft for the same week. A published
+            roster must be withdrawn first, so staff are never silently moved.
+          </div>
+
+          <button class="btn btn-primary w-100" type="submit">Generate roster</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">How the engine builds your roster</h2>
+        <p class="mb-0 small text-secondary">A two-phase hybrid: feasibility first, fairness second.</p>
+      </div>
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h3 class="h6 mb-2" style="color:var(--brand)">Phase 1 &middot; Feasible construction</h3>
+            <p class="small">
+              The week is walked in calendar order, night shifts first, because
+              each decision constrains the next. A staff member is only offered a
+              slot if they pass every hard constraint. Nothing illegal is ever
+              produced and then repaired.
+            </p>
+            <ul class="small text-secondary ps-3 mb-0" style="line-height:1.8">
+              <li>One shift per person per day</li>
+              <li>Minimum rest between shifts</li>
+              <li>Maximum weekly hours</li>
+              <li>Maximum consecutive days and nights</li>
+              <li>Approved leave and night-duty clearance</li>
+              <li>Department minimum staffing per shift</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h3 class="h6 mb-2" style="color:var(--brand)">Phase 2 &middot; Heuristic optimisation</h3>
+            <p class="small">
+              The feasible roster is then improved by hill climbing over three
+              moves: fill a gap, reassign a slot, swap two slots. Every candidate
+              move is re-checked against the same hard constraints, so
+              feasibility holds at every step of the search.
+            </p>
+            <ul class="small text-secondary ps-3 mb-0" style="line-height:1.8">
+              <li>Even spread of night shifts</li>
+              <li>Even spread of weekend duty</li>
+              <li>Even total hours</li>
+              <li>Shift preferences where possible</li>
+              <li>Recent weeks carried forward, so fairness rolls over</li>
+            </ul>
+          </div>
+        </div>
+
+        <hr>
+
+        <p class="small mb-0">
+          Where no legal assignment exists the slot is recorded as a
+          <strong>coverage gap</strong> and escalated, rather than filled by
+          breaking a rule. A gap is a decision for a human, not a failure of the
+          engine.
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Shift definitions</h3></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Shift</th><th>Window</th><th class="text-end">Duration</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            {% for shift in shifts %}
+            <tr>
+              <td class="fw-semibold">{{ shift.short_name }}</td>
+              <td class="font-mono">{{ shift.window_label }}</td>
+              <td class="text-end">{{ shift.duration_hours }}h</td>
+              <td class="text-secondary">
+                {% if shift.crosses_midnight %}
+                  Runs into the following morning. Anyone on this shift cannot
+                  take the next day's morning or afternoon shift.
+                {% else %}Same-day shift.{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

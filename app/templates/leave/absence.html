@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block page_title %}Report absence{% endblock %}
+{% block heading %}Report an unplanned absence{% endblock %}
+{% block subheading %}Immediate effect: shifts are released and refilled at once{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><h2 class="h6 mb-0 fw-semibold">Absence details</h2></div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="staff_id" class="form-label small fw-semibold">Staff member</label>
+            <select class="form-select" id="staff_id" name="staff_id" required>
+              <option value="">Select a staff member</option>
+              {% for staff in staff_pool %}
+              <option value="{{ staff.id }}">
+                {{ staff.full_name }} - {{ staff.staff_no }} ({{ staff.department.code }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="absence_date" class="form-label small fw-semibold">Date of absence</label>
+            <input type="date" class="form-control" id="absence_date" name="absence_date"
+                   value="{{ today.isoformat() }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="reason" class="form-label small fw-semibold">Reason</label>
+            <textarea class="form-control" id="reason" name="reason" rows="3" required
+                      placeholder="e.g. Called in sick this morning"></textarea>
+          </div>
+
+          <div class="alert alert-warning py-2 px-3 small">
+            This takes effect immediately and does not wait for approval. The
+            person's shifts on that date are released and the engine assigns
+            replacements straight away. Anything it cannot cover is escalated to
+            you as a coverage gap.
+          </div>
+
+          <button class="btn btn-warning w-100 text-white fw-semibold" type="submit">
+            Record absence and re-optimise
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">What happens next</h2>
+        <p class="mb-0 small text-secondary">The sequence the system runs the moment you submit.</p>
+      </div>
+      <div class="card-body">
+        <ul class="timeline">
+          <li>
+            <time>Step 1</time>
+            <strong>Shifts released.</strong> Every shift the staff member holds on
+            that date is marked vacated. The original assignment is kept, not
+            deleted, so the roster shows who was meant to work as well as who
+            actually covers.
+          </li>
+          <li>
+            <time>Step 2</time>
+            <strong>Replacements found.</strong> For each vacated shift the engine
+            ranks colleagues who pass every hard constraint and picks the one
+            carrying the lightest share of that kind of duty.
+          </li>
+          <li>
+            <time>Step 3</time>
+            <strong>People told.</strong> Each replacement receives an in-app
+            message, an email and an SMS naming the shift and the reason.
+          </li>
+          <li>
+            <time>Step 4</time>
+            <strong>Gaps escalated.</strong> Any shift with no compliant candidate
+            is flagged on the roster and sent to you and HR, rather than filled by
+            breaking a rest rule.
+          </li>
+          <li>
+            <time>Step 5</time>
+            <strong>Recorded.</strong> Every step is written to the hash-chained
+            audit trail with your name and the time against it.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

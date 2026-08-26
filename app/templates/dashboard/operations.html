@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block page_title %}Operations dashboard - {{ system_name }}{% endblock %}
+{% block heading %}Operations dashboard{% endblock %}
+{% block subheading %}{{ scope }} &middot; live workforce availability{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex align-items-center gap-2 flex-shrink-0">
+  <span class="badge-soft green"><span class="live-dot"></span> Live</span>
+  <span class="badge-soft brand" id="current-shift">
+    {{ snapshot.current_shift.short_name if snapshot.current_shift else 'Between shifts' }}
+  </span>
+  <span class="text-secondary small text-nowrap d-none d-md-inline">
+    as of <span id="as-of">{{ snapshot.moment|dt('%H:%M:%S') }}</span>
+  </span>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-green">
+      <div class="stat-tile__label">On duty and available</div>
+      <div class="stat-tile__value" data-live="on_duty">{{ snapshot.on_duty }}</div>
+      <div class="stat-tile__meta">Signed in and inside the facility</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-amber">
+      <div class="stat-tile__label">Temporarily out</div>
+      <div class="stat-tile__value" data-live="temporarily_out">{{ snapshot.temporarily_out }}</div>
+      <div class="stat-tile__meta">On duty, currently off-site</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-brand">
+      <div class="stat-tile__label">Doctors on duty</div>
+      <div class="stat-tile__value" data-live="doctors_on_duty">{{ snapshot.doctors_on_duty }}</div>
+      <div class="stat-tile__meta"><span data-live="nurses_on_duty">{{ snapshot.nurses_on_duty }}</span> nurses on duty</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-red' if snapshot.absent else '' }}">
+      <div class="stat-tile__label">Absent</div>
+      <div class="stat-tile__value" data-live="absent">{{ snapshot.absent }}</div>
+      <div class="stat-tile__meta">Rostered now, not signed in</div>
+    </div>
+  </div>
+</div>
+
+{% if gaps %}
+<div class="card border-danger mb-3">
+  <div class="card-header bg-danger-subtle border-danger-subtle">
+    <h2 class="h6 mb-0 text-danger fw-semibold">Coverage gaps need a decision</h2>
+    <p class="mb-0 small text-secondary">The engine could not fill these shifts without breaching a hard constraint.</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr><th>Department</th><th>Date</th><th>Shift</th><th>Cause</th><th class="text-end">Action</th></tr>
+      </thead>
+      <tbody>
+        {% for department, rows in gaps.items() %}
+          {% for row in rows %}
+          <tr>
+            <td class="fw-semibold">{{ department.name }}</td>
+            <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+            <td>
+              <span class="badge-soft red">{{ row.shift.short_name }}</span>
+              <span class="text-secondary">{{ row.shift.window_label }}</span>
+            </td>
+            <td class="text-secondary">{{ row.change_reason or 'No eligible staff' }}</td>
+            <td class="text-end text-nowrap">
+              <form method="post" action="{{ url_for('schedule.fill_gap', assignment_id=row.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary btn-sm py-0 px-2" type="submit">Retry fill</button>
+              </form>
+              <a class="btn btn-outline-secondary btn-sm py-0 px-2"
+                 href="{{ url_for('schedule.override', assignment_id=row.id) }}">Assign manually</a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-xl-8">
+
+    <!-- Presence split + board -->
+    <div class="card mb-3">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">Who is in the building</h2>
+          <p class="mb-0 small text-secondary">Derived from attendance, roster and leave records. Refreshes every 30 seconds.</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-4">
+            <div class="chart-box h-sm">
+              <canvas id="presenceChart" data-chart='{{ {
+                "kind": "presence",
+                "values": [snapshot.on_duty, snapshot.temporarily_out, snapshot.on_leave, snapshot.absent, snapshot.off_duty]
+              } | tojson }}'></canvas>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="presence-grid" id="presence-board">
+              {% for row in snapshot.rows %}
+              <div class="presence-card {{ row.state.colour }}">
+                <span class="avatar avatar-sm">{{ row.staff.initials }}</span>
+                <div class="min-w-0">
+                  <strong>{{ row.staff.full_name }}</strong>
+                  <small>
+                    {{ row.staff.department.code }} &middot; {{ row.state.label }}
+                    {%- if row.since %} &middot; in {{ row.since|dt('%H:%M') }}{% endif %}
+                  </small>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Departmental staffing -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2 class="h6 mb-0 fw-semibold">Departmental staffing right now</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Department</th>
+              <th class="text-end">Staff</th><th class="text-end">Rostered</th>
+              <th class="text-end">Available</th><th class="text-end">Out</th>
+              <th class="text-end">Leave</th><th class="text-end">Absent</th>
+              <th style="width:130px">Cover</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in snapshot.by_department %}
+            {% set rate = (row.covered_now / row.rostered_now * 100) if row.rostered_now else 100 %}
+            <tr>
+              <td class="fw-semibold">
+                <a href="{{ url_for('schedule.department_roster', department_id=row.department.id) }}"
+                   class="text-decoration-none">{{ row.department.name }}</a>
+              </td>
+              <td class="text-end">{{ row.total }}</td>
+              <td class="text-end">{{ row.rostered_now }}</td>
+              <td class="text-end fw-semibold text-success">{{ row.available }}</td>
+              <td class="text-end">{{ row.temporarily_out }}</td>
+              <td class="text-end">{{ row.on_leave }}</td>
+              <td class="text-end {{ 'text-danger fw-semibold' if row.absent }}">{{ row.absent }}</td>
+              <td>
+                <div class="progress" style="height:6px" role="progressbar"
+                     aria-valuenow="{{ rate|round|int }}" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar {{ 'bg-success' if rate >= 90 else ('bg-warning' if rate >= 70 else 'bg-danger') }}"
+                       style="width:{{ rate }}%"></div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Week in numbers -->
+    <div class="card">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">This week in numbers</h2>
+          <p class="mb-0 small text-secondary">{{ week_label }}</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('reports.analytics_dashboard') }}">Full analytics</a>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-lg-3">
+            <div class="stat-tile__label">Shifts scheduled</div>
+            <div class="fs-4 fw-bold">{{ report.scheduling.shifts_scheduled }}</div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="stat-tile__label">Fill rate</div>
+            <div class="fs-4 fw-bold {{ 'text-success' if report.scheduling.fill_rate == 100 else 'text-warning' }}">
+              {{ report.scheduling.fill_rate }}%</div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="stat-tile__label">Hours worked</div>
+            <div class="fs-4 fw-bold">{{ report.attendance.worked_hours }}</div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="stat-tile__label">Overtime</div>
+            <div class="fs-4 fw-bold">{{ report.attendance.overtime_hours }}h</div>
+          </div>
+        </div>
+
+        {% if report.daily_coverage %}
+        <div class="chart-box h-sm">
+          <canvas id="coverageChart" data-chart='{{ {
+            "kind": "coverage",
+            "labels": report.daily_coverage | map(attribute="date") | map("string") | list,
+            "filled": report.daily_coverage | map(attribute="filled") | list,
+            "gaps": report.daily_coverage | map(attribute="gaps") | list
+          } | tojson }}'></canvas>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <!-- Roster status -->
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="h6 mb-0 fw-semibold flex-grow-1">Roster status</h3>
+        <a class="small" href="{{ url_for('schedule.generate') }}">Generate</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0" style="font-size:.78rem">
+          <thead class="table-light">
+            <tr><th>Department</th><th>This week</th><th>Next week</th></tr>
+          </thead>
+          <tbody>
+            {% for row in roster_status %}
+            <tr>
+              <td class="fw-semibold">
+                <a href="{{ url_for('schedule.department_roster', department_id=row.department.id) }}"
+                   class="text-decoration-none">{{ row.department.code }}</a>
+                <div class="text-secondary" style="font-size:.68rem">{{ row.headcount }} staff</div>
+              </td>
+              <td>
+                {% if row.current %}
+                  <span class="badge-soft {{ 'green' if row.current.is_published else 'amber' }}">
+                    {{ 'Published' if row.current.is_published else 'Draft' }}</span>
+                  {% if row.current.gap_count %}
+                  <div class="text-danger" style="font-size:.68rem">{{ row.current.gap_count }} gap(s)</div>
+                  {% endif %}
+                {% else %}<span class="badge-soft grey">None</span>{% endif %}
+              </td>
+              <td>
+                {% if row.next %}
+                  <span class="badge-soft {{ 'green' if row.next.is_published else 'amber' }}">
+                    {{ 'Published' if row.next.is_published else 'Draft' }}</span>
+                {% else %}<span class="badge-soft grey">None</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pending leave -->
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="h6 mb-0 fw-semibold flex-grow-1">Leave awaiting review</h3>
+        {% if pending_leave %}<a class="small" href="{{ url_for('leave.pending') }}">Review all</a>{% endif %}
+      </div>
+      {% if pending_leave %}
+      <ul class="list-group list-group-flush">
+        {% for row in pending_leave[:6] %}
+        <li class="list-group-item d-flex align-items-center gap-2 py-2">
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small">{{ row.staff.full_name }}</div>
+            <div class="text-secondary" style="font-size:.7rem">{{ row.type_label }} &middot; {{ row.period_label }}</div>
+          </div>
+          <span class="badge-soft amber">{{ row.days }}d</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="card-body">
+        <div class="empty-state py-4">
+          <strong>Nothing pending</strong>All leave requests have been decided.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Activity -->
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="h6 mb-0 fw-semibold flex-grow-1">Recent activity</h3>
+        {% if current_user.has_oversight %}
+        <a class="small" href="{{ url_for('reports.audit_trail') }}">Audit trail</a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if recent_activity %}
+        <ul class="timeline">
+          {% for entry in recent_activity %}
+          <li>
+            <time>{{ entry.created_at|dt('%d %b, %H:%M') }} &middot; {{ entry.actor_name }}</time>
+            {{ entry.summary }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state"><strong>No activity yet</strong></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.js') }}"></script>
+<script>
+  HospitalPortal.renderCharts();
+  HospitalPortal.startPresencePolling("{{ url_for('dashboard.presence_api') }}", 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block page_title %}Dashboard - {{ system_name }}{% endblock %}
+{% block heading %}Good day, {{ current_user.first_name }}{% endblock %}
+{% block subheading %}{{ current_user.job_title or current_user.role_label }} &middot; {{ current_user.department.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile is-brand">
+      <div class="stat-tile__label">Shifts this week</div>
+      <div class="stat-tile__value">{{ assignments|length }}</div>
+      <div class="stat-tile__meta">{{ week_label }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile">
+      <div class="stat-tile__label">Hours rostered</div>
+      <div class="stat-tile__value">{{ weekly_hours }}</div>
+      <div class="stat-tile__meta">Across all shift types</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-amber' if night_count }}">
+      <div class="stat-tile__label">Night shifts</div>
+      <div class="stat-tile__value">{{ night_count }}</div>
+      <div class="stat-tile__meta">22:00 to 07:00</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-tile {{ 'is-green' if attendance.signed_in and not attendance.outside else ('is-amber' if attendance.outside else '') }}">
+      <div class="stat-tile__label">Attendance status</div>
+      <div class="stat-tile__value fs-4 pt-1">
+        {% if attendance.outside %}Away
+        {% elif attendance.signed_in %}On duty
+        {% else %}Signed out{% endif %}
+      </div>
+      <div class="stat-tile__meta">
+        {% if attendance.signed_in %}{{ attendance.elapsed|duration }} on site today
+        {% else %}Not signed in{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">My week</h2>
+          <p class="mb-0 small text-secondary">{{ week_label }} &middot; only published rosters are shown</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('schedule.my_schedule') }}">Full schedule</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Day</th><th>Date</th><th>Shift</th><th class="text-end">Hours</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for day in week_dates %}
+            {% set row = assignments_by_date.get(day) %}
+            <tr>
+              <td class="fw-semibold">{{ day.strftime('%A') }}</td>
+              <td class="text-secondary text-nowrap">{{ day|d('%d %b') }}</td>
+              {% if row %}
+              <td>
+                <span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span>
+                <span class="text-secondary">{{ row.shift.window_label }}</span>
+              </td>
+              <td class="text-end">{{ row.shift.duration_hours }}h</td>
+              <td>
+                {% if row.status == 'REPLACEMENT' %}
+                  <span class="badge-soft amber">Cover</span>
+                {% else %}
+                  <span class="badge-soft green">Scheduled</span>
+                {% endif %}
+              </td>
+              {% else %}
+              <td colspan="3" class="text-secondary">Off duty</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <div class="flex-grow-1">
+          <h2 class="h6 mb-0 fw-semibold">My leave requests</h2>
+          <p class="mb-0 small text-secondary">Most recent first</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('leave.my_leave') }}">Request leave</a>
+      </div>
+      {% if leave_rows %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Type</th><th>Period</th><th class="text-end">Days</th><th>Status</th><th>Decided by</th></tr>
+          </thead>
+          <tbody>
+            {% for row in leave_rows %}
+            <tr>
+              <td class="fw-semibold">{{ row.type_label }}</td>
+              <td class="text-nowrap">{{ row.period_label }}</td>
+              <td class="text-end">{{ row.days }}</td>
+              <td>
+                <span class="badge-soft {{ {'APPROVED':'green','PENDING':'amber','REJECTED':'red','CANCELLED':'grey'}[row.status] }}">
+                  {{ row.status|titleise }}</span>
+              </td>
+              <td class="text-secondary">{{ row.reviewed_by.full_name if row.reviewed_by else 'Awaiting review' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body">
+        <div class="empty-state">
+          <strong>No leave requests yet</strong>
+          Submit one from the My leave page and your manager will be notified straight away.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Attendance</h3></div>
+      <div class="card-body">
+        {% if attendance.assignment %}
+        <div class="alert alert-light border py-2 px-3 small mb-3">
+          <strong>{{ attendance.assignment.shift.short_name }} shift</strong> &middot;
+          {{ attendance.assignment.shift.window_label }}<br>
+          <span class="text-secondary">{{ attendance.assignment.work_date|d('%A %d %B') }}</span>
+        </div>
+        {% else %}
+        <div class="alert alert-warning py-2 px-3 small mb-3">
+          You have no shift running right now.
+        </div>
+        {% endif %}
+
+        {% if not attendance.signed_in %}
+        <form method="post" action="{{ url_for('attendance.sign_in') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary w-100" type="submit">Sign in to the facility</button>
+        </form>
+        {% elif attendance.outside %}
+        <form method="post" action="{{ url_for('attendance.return_to_facility') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-primary w-100" type="submit">Log back in on return</button>
+        </form>
+        <p class="text-secondary mt-2 mb-0" style="font-size:.72rem">
+          You logged out at {{ attendance.open_exit.occurred_at|dt('%H:%M') }}
+          ({{ attendance.open_exit.reason }}).
+        </p>
+        {% else %}
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('attendance.index') }}">Log an exit</a>
+          <form method="post" action="{{ url_for('attendance.sign_out') }}" class="flex-fill">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary w-100" type="submit">Sign out</button>
+          </form>
+        </div>
+        <p class="text-secondary mt-2 mb-0" style="font-size:.72rem">
+          Signed in at {{ attendance.record.sign_in_at|dt('%H:%M') }}.
+          Log an exit whenever you leave the facility.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h3 class="h6 mb-0 fw-semibold">Next shifts</h3></div>
+      <div class="card-body">
+        {% if upcoming %}
+        <ul class="timeline">
+          {% for row in upcoming %}
+          <li>
+            <time>{{ row.work_date|d('%A %d %B') }}</time>
+            <strong>{{ row.shift.short_name }}</strong>
+            <span class="text-secondary">{{ row.shift.window_label }}</span>
+            {% if row.status == 'REPLACEMENT' %}<span class="badge-soft amber">Cover</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state">
+          <strong>Nothing scheduled</strong>Your next roster has not been published yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="h6 mb-0 fw-semibold flex-grow-1">Unread notifications</h3>
+        <a class="small" href="{{ url_for('notifications.inbox') }}">View all</a>
+      </div>
+      <div class="card-body">
+        {% if notifications %}
+        <ul class="timeline">
+          {% for note in notifications %}
+          <li>
+            <time>{{ note.created_at|dt('%d %b, %H:%M') }}</time>
+            <strong>{{ note.subject }}</strong>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state"><strong>You are up to date</strong>No unread messages.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

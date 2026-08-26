@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block page_title %}Leave approvals{% endblock %}
+{% block heading %}Leave approvals{% endblock %}
+{% block subheading %}{{ requests|length }} request(s) awaiting your decision{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-header">
+    <h2 class="h6 mb-0 fw-semibold">Awaiting decision</h2>
+    <p class="mb-0 small text-secondary">Approving releases the affected shifts and refills them automatically.</p>
+  </div>
+  {% if requests %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>Staff</th><th>Department</th><th>Type</th><th>Period</th>
+          <th class="text-end">Days</th><th>Reason</th><th>Requested</th>
+          <th style="width:300px">Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in requests %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar avatar-sm">{{ row.staff.initials }}</span>
+              <div>
+                <div class="fw-semibold">{{ row.staff.full_name }}</div>
+                <div class="text-secondary" style="font-size:.68rem">{{ row.staff.staff_no }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-secondary">{{ row.staff.department.name }}</td>
+          <td>
+            <span class="badge-soft brand">{{ row.type_label }}</span>
+            {% if row.is_unplanned %}<span class="badge-soft red">Unplanned</span>{% endif %}
+          </td>
+          <td class="text-nowrap">{{ row.period_label }}</td>
+          <td class="text-end fw-semibold">{{ row.days }}</td>
+          <td class="text-secondary">{{ row.reason or 'Not stated' }}</td>
+          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.created_at|dt('%d %b, %H:%M') }}</td>
+          <td>
+            <form method="post" action="{{ url_for('leave.approve', request_id=row.id) }}"
+                  class="d-flex gap-2 mb-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="text" class="form-control form-control-sm" name="comment"
+                     placeholder="Comment (optional)">
+              <button class="btn btn-primary btn-sm text-nowrap" type="submit">Approve</button>
+            </form>
+            <form method="post" action="{{ url_for('leave.reject', request_id=row.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="submit">Reject request</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <strong>Nothing to decide</strong>Every leave request in your remit has been reviewed.
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="h6 mb-0 fw-semibold">Recent decisions</h2>
+    <p class="mb-0 small text-secondary">What happened to the roster in each case.</p>
+  </div>
+  {% if decided %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 small">
+      <thead class="table-light">
+        <tr><th>Staff</th><th>Type</th><th>Period</th><th>Status</th>
+            <th>Decided by</th><th>When</th><th>Roster effect</th></tr>
+      </thead>
+      <tbody>
+        {% for row in decided %}
+        <tr>
+          <td class="fw-semibold">{{ row.staff.full_name }}</td>
+          <td class="text-secondary">{{ row.type_label }}</td>
+          <td class="text-nowrap">{{ row.period_label }}</td>
+          <td>
+            <span class="badge-soft {{ {'APPROVED':'green','REJECTED':'red','CANCELLED':'grey'}.get(row.status,'grey') }}">
+              {{ row.status|titleise }}</span>
+          </td>
+          <td class="text-secondary">{{ row.reviewed_by.full_name if row.reviewed_by else '-' }}</td>
+          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.reviewed_at|dt('%d %b, %H:%M') }}</td>
+          <td>
+            {% if row.shifts_released %}
+              {{ row.shifts_released }} released &middot;
+              <span class="text-success">{{ row.shifts_refilled }} refilled</span>
+              {% if row.shifts_released > row.shifts_refilled %}
+              <span class="badge-soft red">{{ row.shifts_released - row.shifts_refilled }} gap</span>
+              {% endif %}
+            {% else %}<span class="text-secondary">No shifts affected</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state"><strong>No decisions recorded yet</strong></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+.env
+instance/
+*.db
+*.sqlite3
+migrations/versions/*.pyc
+.venv/
+venv/
+.vscode/
+.idea/
+*.log
+
+# Offline dependency bundle: build output, rebuilt with
+#   python -m pip download -r requirements.txt -d wheels
+# Not tracked, but DO include it when zipping for handover.
+wheels/
+
+# Thesis documents.
+#
+# Excluded by default: Ikes_Eyram_Kunakey_ADS23A00031Y.docx carries the
+# author's full name and index number, and publishing an unsubmitted thesis
+# can trip plagiarism checks or simply be copied. The repository is the
+# software; the thesis is personal academic work.
+#
+# To include them anyway (fine on a private repository), delete these two
+# lines and run:  git add -f *.docx
+*.docx

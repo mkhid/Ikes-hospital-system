@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block page_title %}Audit trail{% endblock %}
+{% block heading %}System audit trail{% endblock %}
+{% block subheading %}{{ start|d }} to {{ end|d }} &middot; {{ entries|length }} entries listed{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2 flex-shrink-0">
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('reports.export_audit_trail', fmt='csv', start=start, end=end) }}">Export CSV</a>
+  <a class="btn btn-outline-secondary btn-sm"
+     href="{{ url_for('reports.export_audit_trail', fmt='pdf', start=start, end=end) }}">Export PDF</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    {% if integrity.intact %}
+    <div class="alert alert-success py-2 px-3 small mb-2">
+      <strong>Chain verified.</strong>
+      All {{ integrity.checked }} audit entries were recomputed and every hash
+      matched its recorded value. No entry has been altered or removed since it
+      was written.
+    </div>
+    {% else %}
+    <div class="alert alert-danger py-2 px-3 small mb-2">
+      <strong>Integrity check failed.</strong>
+      {{ integrity.reason }} at entry #{{ integrity.broken_at }} of
+      {{ integrity.checked }} checked. Entries from that point on can no longer
+      be relied upon.
+    </div>
+    {% endif %}
+    <p class="text-secondary mb-0" style="font-size:.72rem">
+      Each entry stores the SHA-256 digest of its own content chained to the
+      digest of the entry before it, so editing or deleting any historical row
+      invalidates every digest that follows it.
+    </p>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end filters">
+      <div class="col-6 col-md-2">
+        <label for="start" class="form-label small fw-semibold mb-1">From</label>
+        <input type="date" class="form-control form-control-sm" id="start" name="start" value="{{ start.isoformat() }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <label for="end" class="form-label small fw-semibold mb-1">To</label>
+        <input type="date" class="form-control form-control-sm" id="end" name="end" value="{{ end.isoformat() }}">
+      </div>
+      <div class="col-md-3">
+        <label for="action" class="form-label small fw-semibold mb-1">Action</label>
+        <select class="form-select form-select-sm" id="action" name="action">
+          <option value="">All actions</option>
+          {% for value in actions %}
+          <option value="{{ value }}" {{ 'selected' if selected_action == value }}>{{ value|titleise }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="actor_id" class="form-label small fw-semibold mb-1">User</label>
+        <select class="form-select form-select-sm" id="actor_id" name="actor_id">
+          <option value="">Everyone</option>
+          {% for person in actors %}
+          <option value="{{ person.id }}" {{ 'selected' if selected_actor == person.id }}>{{ person.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="department_id" class="form-label small fw-semibold mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id">
+          <option value="">All</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {{ 'selected' if selected_department == dept.id }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button class="btn btn-primary btn-sm flex-fill" type="submit">Go</button>
+      </div>
+    </form>
+    <a class="btn btn-link btn-sm ps-0 mt-1" href="{{ url_for('reports.audit_trail') }}">Reset filters</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="h6 mb-0 fw-semibold">Entries</h2>
+    <p class="mb-0 small text-secondary">Append-only. Newest first. Maximum 400 rows shown.</p>
+  </div>
+  {% if entries %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:.76rem">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>Timestamp</th><th>User</th><th>Role</th>
+          <th>Action</th><th>Detail</th><th>Changes</th><th>Digest</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td class="font-mono text-secondary">{{ entry.id }}</td>
+          <td class="text-nowrap">{{ entry.created_at|dt('%d %b, %H:%M:%S') }}</td>
+          <td class="fw-semibold">{{ entry.actor_name }}</td>
+          <td><span class="badge-soft grey">{{ entry.actor_role|titleise }}</span></td>
+          <td>
+            {% set tone = 'red' if 'FAILED' in entry.action or 'DELETED' in entry.action or 'GAP' in entry.action
+                     else ('amber' if 'OVERRIDE' in entry.action or 'REJECT' in entry.action or 'REOPTIMISED' in entry.action
+                     else ('green' if 'PUBLISH' in entry.action or 'APPROVED' in entry.action else 'brand')) %}
+            <span class="badge-soft {{ tone }}">{{ entry.action|titleise }}</span>
+          </td>
+          <td>{{ entry.summary }}</td>
+          <td class="font-mono text-secondary" style="max-width:230px">
+            {% if entry.old_value %}<div title="{{ entry.old_value }}">- {{ entry.old_value|truncate(58) }}</div>{% endif %}
+            {% if entry.new_value %}<div title="{{ entry.new_value }}">+ {{ entry.new_value|truncate(58) }}</div>{% endif %}
+          </td>
+          <td class="font-mono text-secondary" title="{{ entry.entry_hash }}">
+            {{ (entry.entry_hash or '')[:10] }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <div class="empty-state">
+      <strong>No entries match these filters</strong>Widen the date range or clear the filters.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
