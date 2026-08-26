@@ -16,19 +16,25 @@ leave, attendance, real-time availability, multi-channel notifications and a
 tamper-evident audit trail.
 
 It is the practical component of a BSc Information Technology thesis
-(Advanced School of Systems and Data Studies, supervised by Mr. Edward S.
-Younge, September 2025). Case study: **Taifa Hospital**, Ghana. The thesis
-documents are in the project folder but excluded from version control.
+(Advanced School of Systems and Data Studies, September 2025), with a hospital
+in Ghana as the case study.
 
 Two source documents defined the scope:
 
-- `FINAL PROJECT WORK.docx` — an 8-point feature brief. **This is authoritative.**
-- `Ikes_Eyram_Kunakey_ADS23A00031Y.docx` — the full five-chapter thesis,
-  providing architecture, algorithm design and justification.
+- A short feature brief (8 points). **This is authoritative.**
+- The full five-chapter thesis, providing architecture, algorithm design and
+  justification.
+
+Both are `.docx` files kept in the working folder but excluded from version
+control, because they carry the author's name and student index number.
 
 Where they disagree, the brief wins (see §7, shift hours).
 
 ---
+
+> **All seeded data is fabricated.** The 28 staff, their contact details and
+> every attendance, lateness and absence record are invented by `seed.py`. They
+> describe no real person. Keep it that way: this is a public repository.
 
 ## 2. Scope, as specified by the user
 

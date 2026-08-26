@@ -1,6 +1,11 @@
 """
 Seed the portal with a working hospital.
 
+EVERY PERSON IN THIS FILE IS FICTIONAL. The names, email addresses, phone
+numbers, qualifications, attendance records, lateness and absences below are
+invented to demonstrate the system. They describe no real individual, and no
+real hospital records were used to produce them.
+
 Creates the six departments, their staff and login accounts, the three shift
 definitions and each department's staffing requirements, then builds several
 weeks of realistic operating history: generated and published rosters,

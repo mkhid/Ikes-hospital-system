@@ -18,10 +18,10 @@ wheels/
 
 # Thesis documents.
 #
-# Excluded by default: Ikes_Eyram_Kunakey_ADS23A00031Y.docx carries the
-# author's full name and index number, and publishing an unsubmitted thesis
-# can trip plagiarism checks or simply be copied. The repository is the
-# software; the thesis is personal academic work.
+# Excluded deliberately: the thesis carries the author's full name and student
+# index number, and publishing an unsubmitted dissertation can trip plagiarism
+# checks or simply be copied. This repository is the software; the thesis is
+# personal academic work and is kept out of it.
 #
 # To include them anyway (fine on a private repository), delete these two
 # lines and run:  git add -f *.docx

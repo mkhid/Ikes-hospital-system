@@ -8,6 +8,13 @@ Built for the BSc Information Technology thesis
 *Intelligent Hospital Workforce Scheduling System*, Advanced School of Systems
 and Data Studies, with Taifa Hospital as the case study.
 
+> **All data in this repository is fabricated.** The 28 staff members, their
+> names, contact details, rosters, attendance records, lateness and absences are
+> invented by [`seed.py`](seed.py) to demonstrate the system. They do not
+> describe any real person, and no real hospital records were used. Every
+> account shares a published demonstration password, so a deployment of this
+> repository must never hold real staff data without changing them first.
+
 ---
 
 ## Getting started
