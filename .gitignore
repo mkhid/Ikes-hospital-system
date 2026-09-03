@@ -26,8 +26,3 @@ wheels/
 # To include them anyway (fine on a private repository), delete these two
 # lines and run:  git add -f *.docx
 *.docx
-
-# Pre-compressed assets built by deploy/compress-static.sh for nginx's
-# gzip_static. Build output, regenerated from the files beside them, and they
-# would otherwise need updating in every commit that touches CSS or JS.
-*.gz
