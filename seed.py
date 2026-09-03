@@ -133,6 +133,10 @@ STAFF = {
         ("TH-NUR-004", "Yaw", "Adjei", Role.STAFF, "Staff Nurse", "RGN", "0244101004", False, True, None),
         ("TH-NUR-005", "Abena", "Darko", Role.STAFF, "Staff Nurse", "RGN", "0244101005", False, False, ShiftCode.MORNING),
         ("TH-NUR-006", "Kofi", "Asante", Role.STAFF, "Enrolled Nurse", "Enrolled Nurse Cert.", "0244101006", False, True, None),
+        ("TH-NUR-007", "Gladys", "Amankwah", Role.STAFF, "Staff Nurse", "RGN", "0244101007", False, True, ShiftCode.AFTERNOON),
+        ("TH-NUR-008", "Priscilla", "Danso", Role.STAFF, "Staff Nurse", "RGN", "0244101008", False, True, None),
+        ("TH-NUR-009", "Theresa", "Kwarteng", Role.STAFF, "Enrolled Nurse", "Enrolled Nurse Cert.", "0244101009", False, True, ShiftCode.NIGHT),
+        ("TH-NUR-010", "Millicent", "Opoku", Role.STAFF, "Staff Nurse", "RGN", "0244101010", False, False, ShiftCode.MORNING),
     ],
     "DOC": [
         ("TH-DOC-001", "Nana", "Amponsah", Role.MANAGER, "Head of Medical Services", "MBChB, MGCPS", "0202202001", True, True, None),

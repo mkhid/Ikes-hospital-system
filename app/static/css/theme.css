@@ -437,21 +437,232 @@ body {
 .chart-box.h-md { height: 250px; }
 .chart-box.h-lg { height: 310px; }
 
-/* Sign-in page */
-.auth-shell { min-height: 100vh; }
-.auth-aside {
-  background: linear-gradient(160deg, #0d2430 0%, #10403c 58%, #0f766e 100%);
-  color: #d5e5ea;
-  padding: 3rem 3.2rem;
-}
-.auth-aside h1 { color: #fff; font-size: 1.7rem; line-height: 1.28; letter-spacing: -0.02em; }
-.auth-aside p { color: #9fbcc6; font-size: 0.88rem; line-height: 1.65; max-width: 44ch; }
-.auth-aside li { color: #bcd4dc; font-size: 0.82rem; }
-.auth-aside li strong { color: #e3f2f0; }
+/* Sign-in page - full-bleed hero with an overlaid glass card */
 .auth-logo {
   width: 44px; height: 44px; border-radius: 0.7rem;
   background: var(--brand);
   display: flex; align-items: center; justify-content: center;
+}
+
+.hero-auth {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* No overflow-x: hidden here. Per spec, hidden on one axis forces the other
+     from visible to auto, which turned this into a scroll container and cut
+     the bottom off the sign-in card. A background image cannot overflow its
+     box anyway, so there was nothing to clip. */
+  background-color: #0a2a4d;
+  background-image: url("../img/doc-landing-page.jpg");
+  background-repeat: no-repeat;
+  background-position: left center;
+  /* The photo is 1470x980 (aspect 1.5). On a 16:9 screen `cover` scales it to
+     the container's width exactly, so there is no horizontal slack and
+     background-position has nothing to move within. Sizing it wider than the
+     viewport and anchoring it left slides the subject across to the right,
+     clear of the sign-in card. max() keeps it covering on tall or narrow
+     viewports, where the width term alone would leave a gap at top and
+     bottom: below 150vh the height term takes over. */
+  background-size: max(125%, 150vh) auto;
+}
+.hero-auth::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* The content sits centred now rather than in a left-hand column, so the
+     scrim is centred too: an even wash for legibility instead of the old
+     left-weighted one, which left the middle of the frame too bright to read
+     white type against. */
+  background:
+    linear-gradient(180deg, rgba(6, 24, 46, 0.5) 0%, rgba(5, 19, 38, 0.22) 42%, rgba(5, 19, 38, 0.62) 100%),
+    radial-gradient(ellipse 70% 65% at 50% 48%, rgba(4, 18, 34, 0.52) 0%, rgba(4, 18, 34, 0.18) 62%, rgba(4, 18, 34, 0) 100%);
+  pointer-events: none;
+}
+.hero-auth > * { position: relative; z-index: 1; }
+.hero-auth__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem clamp(1.1rem, 4vw, 3.4rem);
+  color: #eef7f8;
+}
+.hero-auth__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 8px rgba(4, 26, 30, 0.55);
+}
+.hero-auth__brand small {
+  display: block;
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: #b9d6da;
+  letter-spacing: 0.02em;
+}
+.hero-auth__mark {
+  width: 38px; height: 38px; border-radius: 0.6rem;
+  background: var(--brand);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(4, 30, 34, 0.4);
+  flex-shrink: 0;
+}
+.hero-auth__place {
+  font-size: 0.78rem;
+  color: #cfe6e9;
+  text-align: right;
+  text-shadow: 0 1px 8px rgba(4, 26, 30, 0.6);
+}
+
+.hero-auth__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.75rem, 2vw, 1.4rem) clamp(1.1rem, 3.5vw, 2.6rem);
+}
+.hero-auth__grid {
+  width: 100%;
+  /* Wide enough for the headline to run across the frame rather than wrap
+     into a narrow column. The card below sets its own, much smaller width. */
+  max-width: 940px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(1rem, 2.4vh, 1.7rem);
+}
+.hero-auth__headline {
+  min-width: 0;
+  color: #fff;
+}
+.hero-auth__headline h1 {
+  max-width: 22ch;
+  margin-inline: auto;
+  /* Capped against viewport height as well as width: the headline, the form
+     and the demo-account list all have to clear 100vh together on a laptop. */
+  font-size: clamp(1.7rem, min(3.7vw, 5.2vh), 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  text-shadow: 0 2px 28px rgba(3, 22, 26, 0.68);
+}
+.hero-auth__headline p {
+  margin-top: 0.85rem;
+  max-width: 48ch;
+  margin-inline: auto;
+  font-size: clamp(0.92rem, 1.35vw, 1.06rem);
+  line-height: 1.55;
+  color: #dcedef;
+  text-shadow: 0 1px 14px rgba(3, 22, 26, 0.7);
+}
+.hero-auth__points {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.hero-auth__points > span {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #eaf5f6;
+  text-shadow: 0 1px 10px rgba(3, 22, 26, 0.75);
+}
+
+.auth-card {
+  min-width: 0;
+  width: 100%;
+  /* The grid above is wide so the headline can spread; the form itself stays
+     a comfortable single-column width and centres within it. */
+  max-width: 420px;
+  text-align: left;
+  box-sizing: border-box;
+  background: rgba(9, 28, 44, 0.34);
+  backdrop-filter: blur(26px) saturate(140%);
+  -webkit-backdrop-filter: blur(26px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 1.1rem;
+  box-shadow:
+    0 28px 66px -20px rgba(2, 14, 22, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  padding: 1.35rem 1.4rem;
+  color: #e9f3f5;
+}
+/* dark-glass panel: light text, translucent controls */
+.auth-card .h4 { color: #ffffff; }
+.auth-card .form-label { color: #d7e7ea; }
+.auth-card .text-secondary { color: #a9c5cd !important; }
+.auth-card .form-check-label { color: #cfe1e5; }
+.auth-card .form-control {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #f2f8f9;
+}
+.auth-card .form-control::placeholder { color: rgba(226, 240, 242, 0.5); }
+.auth-card .form-control:focus {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #5eead4;
+  box-shadow: 0 0 0 0.2rem rgba(94, 234, 212, 0.25);
+  color: #ffffff;
+}
+.auth-card .form-check-input {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.auth-card .form-check-input:checked {
+  background-color: var(--brand);
+  border-color: var(--brand);
+}
+.auth-card code { color: #8fe3d8; background: transparent; font-size: 0.78rem; }
+.auth-card .alert { backdrop-filter: none; }
+/* tighten default Bootstrap spacing so the panel fits one screen */
+.auth-card .mb-4 { margin-bottom: 0.9rem !important; }
+.auth-card .mb-3 { margin-bottom: 0.7rem !important; }
+
+.auth-demo {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.auth-demo__title {
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #9cbcc4;
+  margin-bottom: 0.5rem;
+}
+.auth-demo__grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+}
+.auth-demo__grid span { color: #b9d1d6; }
+.auth-demo__pw {
+  margin-top: 0.55rem;
+  font-size: 0.72rem;
+  color: #9cbcc4;
+}
+.hero-auth__foot {
+  padding: 0.6rem clamp(1.1rem, 4vw, 3.4rem) 0.85rem;
+  color: #bcd6da;
+  font-size: 0.7rem;
+  text-shadow: 0 1px 8px rgba(4, 26, 30, 0.6);
+}
+
+@media (max-width: 991.98px) {
+  .hero-auth { background-position: 62% center; }
+  .hero-auth__grid { max-width: 560px; gap: 1.4rem; }
+  .hero-auth__headline h1 { max-width: 18ch; }
+  .auth-card { background: rgba(7, 22, 35, 0.5); }
+  .hero-auth__place { display: none; }
 }
 
 /* Bootstrap ships no min-width utility; flex children need this to truncate. */

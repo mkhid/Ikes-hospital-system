@@ -1,0 +1,26 @@
+# systemd unit for the portal. Substitute <APP_USER> and <APP_DIR>, then:
+#
+#   sudo cp deploy/ihwss.service /etc/systemd/system/ihwss.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ihwss
+#   systemctl status ihwss
+#
+# Runs wsgi.py, which serves the app through Waitress. Do not point this at
+# run.py: that is the Flask development server, single-threaded and carrying
+# an interactive debugger.
+
+[Unit]
+Description=Intelligent Hospital Workforce Scheduling System
+After=network.target
+
+[Service]
+Type=simple
+User=<APP_USER>
+WorkingDirectory=<APP_DIR>
+EnvironmentFile=<APP_DIR>/.env
+ExecStart=<APP_DIR>/.venv/bin/python wsgi.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
