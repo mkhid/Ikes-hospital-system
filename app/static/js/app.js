@@ -10,12 +10,12 @@
   var HospitalPortal = {};
 
   var PALETTE = {
-    brand: "#0f766e",
-    brandSoft: "rgba(15, 118, 110, 0.15)",
+    brand: "#1a5fb4",
+    brandSoft: "rgba(26, 95, 180, 0.15)",
     green: "#21a049",
     amber: "#e08a17",
     red: "#d64545",
-    blue: "#3b6fe0",
+    blue: "#6355d8",
     grey: "#94a3b8",
     ink: "#16202b",
     muted: "#6b7c8f",
