@@ -173,19 +173,29 @@ with app.app_context():
 
 print("\n4. ATTENDANCE LIFECYCLE")
 with app.app_context():
-    # Find someone rostered right now who is not already signed in.
+    # Pick anyone who is not currently signed in.
+    #
+    # Selecting on "rostered now AND not signed in" used to leave nobody to
+    # choose from: seed.py signs in everyone whose shift is running, so right
+    # after a seed that set is empty. The old fallback then picked a hardcoded
+    # staff number who was already signed in and stepped out, the application
+    # correctly refused the double sign-in, and the test reported a failure
+    # against its own pre-existing record.
+    #
+    # Being signed in is the only precondition this section actually needs, so
+    # that is all it selects on. The person may end up with an unrostered
+    # record, which exercises the same lifecycle.
     from app.services import attendance as attendance_service
     from app.utils.timeutils import now as _now
 
     moment = _now()
     picked = None
     for staff in Staff.query.filter_by(is_active=True).all():
-        assignment = attendance_service.expected_assignment(staff, moment)
-        if assignment and not attendance_service.open_record(staff, moment):
+        if not attendance_service.open_record(staff, moment):
             picked = staff.staff_no
             break
     if picked is None:
-        picked = "TH-LAB-006"
+        raise SystemExit("  every active staff member is signed in; run seed.py first")
     print(f"  (using {picked})")
 
 worker = login(picked)

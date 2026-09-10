@@ -18,6 +18,7 @@ def create_app(config_name=None):
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     _apply_proxy_fix(app)
+    _add_static_cache_busting(app)
     _init_extensions(app)
     _register_blueprints(app)
     _register_template_helpers(app)
@@ -28,6 +29,33 @@ def create_app(config_name=None):
     _warn_on_unsafe_production(app)
 
     return app
+
+
+def _add_static_cache_busting(app):
+    """
+    Stamp every static URL with the file's modification time.
+
+    Flask sends static files with Cache-Control: no-cache, so a browser is
+    supposed to revalidate and pick up a change. In practice it will happily
+    keep serving a stylesheet it already has in memory, which is how a theme
+    change appears not to have worked until someone thinks to hard-refresh.
+
+    Appending the mtime makes the URL itself change whenever the file does, so
+    the browser has no cached entry to reuse. Templates are untouched: this
+    hooks url_for, so every existing url_for('static', ...) call benefits.
+    """
+    import os
+
+    @app.url_defaults
+    def stamp(endpoint, values):
+        if endpoint != "static" or "filename" not in values:
+            return
+        try:
+            path = os.path.join(app.static_folder, values["filename"])
+            values["v"] = int(os.stat(path).st_mtime)
+        except OSError:
+            # Missing file: let the request 404 normally rather than break here.
+            pass
 
 
 def _apply_proxy_fix(app):

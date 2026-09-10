@@ -30,7 +30,7 @@ from app.utils.timeutils import format_d, format_dt, humanise_duration, now
 
 INK = colors.HexColor("#1f2933")
 MUTED = colors.HexColor("#6b7280")
-ACCENT = colors.HexColor("#0f766e")
+ACCENT = colors.HexColor("#1a5fb4")
 BAND = colors.HexColor("#f1f5f9")
 LINE = colors.HexColor("#d5dbe3")
 WARN = colors.HexColor("#b45309")
@@ -100,7 +100,7 @@ def _kpi_band(pairs, styles, columns=4):
     for label, value in pairs:
         cells.append(
             Paragraph(
-                f'<font size="13" color="#0f766e"><b>{value}</b></font><br/>'
+                f'<font size="13" color="#1a5fb4"><b>{value}</b></font><br/>'
                 f'<font size="7" color="#6b7280">{label.upper()}</font>',
                 styles["body"],
             )

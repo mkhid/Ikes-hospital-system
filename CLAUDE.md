@@ -264,7 +264,10 @@ Ordered by value.
    initialise it or drop the claim.
 3. **Resolve the shift-hours contradiction** (§7). User decision.
 4. **Live email/SMS credentials** if real delivery is wanted for the defence.
-5. **`docs/` is an empty folder.** Use or remove.
+5. ~~`docs/` is an empty folder.~~ Now holds the thesis code figures and
+   their generator (`docs/generate_figures.py`). **Regenerate them after
+   changing any illustrated function**, or the line numbers in the figures
+   will no longer match the source.
 6. **Update the thesis ERD** to the ten implemented tables (§4).
 
 ### Known limitation, documented not broken

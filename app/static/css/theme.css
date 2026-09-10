@@ -15,20 +15,20 @@
 
 /* ---------- 1. Palette ---------------------------------------------- */
 :root {
-  --brand: #0f766e;
-  --brand-dark: #0b5a54;
-  --brand-darker: #094a45;
-  --brand-soft: #e6f4f2;
-  --sidebar-bg: #0d2430;
-  --sidebar-ink: #c4d5e0;
-  --sidebar-muted: #7f9bab;
+  --brand: #1a5fb4;
+  --brand-dark: #17529c;
+  --brand-darker: #134487;
+  --brand-soft: #e7f0fb;
+  --sidebar-bg: #111e30;
+  --sidebar-ink: #c6d5e8;
+  --sidebar-muted: #8497b3;
 
   /* Bootstrap global tokens */
-  --bs-primary: #0f766e;
-  --bs-primary-rgb: 15, 118, 110;
-  --bs-link-color: #0f766e;
-  --bs-link-color-rgb: 15, 118, 110;
-  --bs-link-hover-color: #0b5a54;
+  --bs-primary: #1a5fb4;
+  --bs-primary-rgb: 26, 95, 180;
+  --bs-link-color: #1a5fb4;
+  --bs-link-color-rgb: 26, 95, 180;
+  --bs-link-hover-color: #17529c;
   --bs-body-color: #16202b;
   --bs-body-bg: #f4f7fb;
   --bs-border-color: #dde5ee;
@@ -69,8 +69,8 @@
 .form-control:focus,
 .form-select:focus,
 .form-check-input:focus {
-  border-color: #5eada6;
-  box-shadow: 0 0 0 0.2rem rgba(15, 118, 110, 0.16);
+  border-color: #7aa8dd;
+  box-shadow: 0 0 0 0.2rem rgba(26, 95, 180, 0.16);
 }
 
 .form-check-input:checked {
@@ -108,7 +108,7 @@
 .badge-soft.green { background: #e5f5ea; color: #157f3d; }
 .badge-soft.amber { background: #fdf1de; color: #a86107; }
 .badge-soft.red   { background: #fdeceb; color: #b3261e; }
-.badge-soft.blue  { background: #e8eefc; color: #1d4ed8; }
+.badge-soft.blue  { background: #ecebfb; color: #5145cd; }
 .badge-soft.brand { background: var(--brand-soft); color: var(--brand-dark); }
 .badge-soft.grey  { background: #eef2f6; color: #64748b; }
 
@@ -160,7 +160,7 @@ body {
   font-size: 0.63rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #6c8797;
+  color: #77899f;
   padding: 0.85rem 0.6rem 0.35rem;
   font-weight: 600;
 }
@@ -261,7 +261,7 @@ body {
 .stat-tile.is-green .stat-tile__value { color: #157f3d; }
 .stat-tile.is-amber .stat-tile__value { color: #a86107; }
 .stat-tile.is-red   .stat-tile__value { color: #b3261e; }
-.stat-tile.is-blue  .stat-tile__value { color: #1d4ed8; }
+.stat-tile.is-blue  .stat-tile__value { color: #5145cd; }
 .stat-tile.is-brand .stat-tile__value { color: var(--brand); }
 
 /* Avatar */
@@ -371,7 +371,7 @@ body {
 .presence-card.green { border-left: 3px solid #21a049; }
 .presence-card.amber { border-left: 3px solid #e08a17; }
 .presence-card.red   { border-left: 3px solid #d64545; }
-.presence-card.blue  { border-left: 3px solid #3b6fe0; }
+.presence-card.blue  { border-left: 3px solid #6355d8; }
 .presence-card.grey  { border-left: 3px solid #cbd5e1; }
 
 .status-dot {
@@ -381,7 +381,7 @@ body {
 .status-dot.green { background: #21a049; }
 .status-dot.amber { background: #e08a17; }
 .status-dot.red   { background: #d64545; }
-.status-dot.blue  { background: #3b6fe0; }
+.status-dot.blue  { background: #6355d8; }
 .status-dot.grey  { background: #98a7b8; }
 
 .live-dot {
@@ -437,7 +437,9 @@ body {
 .chart-box.h-md { height: 250px; }
 .chart-box.h-lg { height: 310px; }
 
-/* Sign-in page - full-bleed hero with an overlaid glass card */
+/* Sign-in page - full-bleed hero with an overlaid glass card.
+   The .auth-shell / .auth-aside rules that stood here were dropped with the
+   two-column markup they styled; the hero below replaces both. */
 .auth-logo {
   width: 44px; height: 44px; border-radius: 0.7rem;
   background: var(--brand);
@@ -486,7 +488,7 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem clamp(1.1rem, 4vw, 3.4rem);
-  color: #eef7f8;
+  color: #eef4fb;
 }
 .hero-auth__brand {
   display: flex;
@@ -500,7 +502,7 @@ body {
   display: block;
   font-weight: 400;
   font-size: 0.7rem;
-  color: #b9d6da;
+  color: #b9cee6;
   letter-spacing: 0.02em;
 }
 .hero-auth__mark {
@@ -512,7 +514,7 @@ body {
 }
 .hero-auth__place {
   font-size: 0.78rem;
-  color: #cfe6e9;
+  color: #cfe0f0;
   text-align: right;
   text-shadow: 0 1px 8px rgba(4, 26, 30, 0.6);
 }
@@ -557,7 +559,7 @@ body {
   margin-inline: auto;
   font-size: clamp(0.92rem, 1.35vw, 1.06rem);
   line-height: 1.55;
-  color: #dcedef;
+  color: #dce8f5;
   text-shadow: 0 1px 14px rgba(3, 22, 26, 0.7);
 }
 .hero-auth__points {
@@ -571,7 +573,7 @@ body {
   align-items: flex-start;
   font-size: 0.85rem;
   line-height: 1.45;
-  color: #eaf5f6;
+  color: #eaf2fa;
   text-shadow: 0 1px 10px rgba(3, 22, 26, 0.75);
 }
 
@@ -592,23 +594,23 @@ body {
     0 28px 66px -20px rgba(2, 14, 22, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
   padding: 1.35rem 1.4rem;
-  color: #e9f3f5;
+  color: #e9f1fa;
 }
 /* dark-glass panel: light text, translucent controls */
 .auth-card .h4 { color: #ffffff; }
-.auth-card .form-label { color: #d7e7ea; }
-.auth-card .text-secondary { color: #a9c5cd !important; }
-.auth-card .form-check-label { color: #cfe1e5; }
+.auth-card .form-label { color: #d7e4f2; }
+.auth-card .text-secondary { color: #a9c0d8 !important; }
+.auth-card .form-check-label { color: #cfdcee; }
 .auth-card .form-control {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.25);
-  color: #f2f8f9;
+  color: #f2f7fc;
 }
-.auth-card .form-control::placeholder { color: rgba(226, 240, 242, 0.5); }
+.auth-card .form-control::placeholder { color: rgba(226, 236, 246, 0.5); }
 .auth-card .form-control:focus {
   background: rgba(255, 255, 255, 0.16);
-  border-color: #5eead4;
-  box-shadow: 0 0 0 0.2rem rgba(94, 234, 212, 0.25);
+  border-color: #7db8f0;
+  box-shadow: 0 0 0 0.2rem rgba(125, 184, 240, 0.25);
   color: #ffffff;
 }
 .auth-card .form-check-input {
@@ -619,7 +621,7 @@ body {
   background-color: var(--brand);
   border-color: var(--brand);
 }
-.auth-card code { color: #8fe3d8; background: transparent; font-size: 0.78rem; }
+.auth-card code { color: #9ec8f2; background: transparent; font-size: 0.78rem; }
 .auth-card .alert { backdrop-filter: none; }
 /* tighten default Bootstrap spacing so the panel fits one screen */
 .auth-card .mb-4 { margin-bottom: 0.9rem !important; }
@@ -635,7 +637,7 @@ body {
   letter-spacing: 0.07em;
   font-size: 0.62rem;
   font-weight: 600;
-  color: #9cbcc4;
+  color: #9cb4cc;
   margin-bottom: 0.5rem;
 }
 .auth-demo__grid {
@@ -644,11 +646,11 @@ body {
   gap: 0.2rem 0.75rem;
   font-size: 0.75rem;
 }
-.auth-demo__grid span { color: #b9d1d6; }
+.auth-demo__grid span { color: #b9c9dd; }
 .auth-demo__pw {
   margin-top: 0.55rem;
   font-size: 0.72rem;
-  color: #9cbcc4;
+  color: #9cb4cc;
 }
 .hero-auth__foot {
   padding: 0.6rem clamp(1.1rem, 4vw, 3.4rem) 0.85rem;

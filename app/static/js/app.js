@@ -10,12 +10,12 @@
   var HospitalPortal = {};
 
   var PALETTE = {
-    brand: "#0f766e",
-    brandSoft: "rgba(15, 118, 110, 0.15)",
+    brand: "#1a5fb4",
+    brandSoft: "rgba(26, 95, 180, 0.15)",
     green: "#21a049",
     amber: "#e08a17",
     red: "#d64545",
-    blue: "#3b6fe0",
+    blue: "#6355d8",
     grey: "#94a3b8",
     ink: "#16202b",
     muted: "#6b7c8f",
@@ -396,6 +396,62 @@
         if (!global.confirm(message)) { event.preventDefault(); }
       });
     }
+  };
+
+  /**
+   * Show the exact period a chosen date and week count resolve to.
+   *
+   * A roster always runs Monday to Sunday, so the date the manager picks is
+   * snapped back to the Monday of its week on the server. Mirroring that here
+   * means they can see the real period before submitting, rather than having
+   * to infer it.
+   */
+  HospitalPortal.previewRosterPeriod = function (dateId, weeksId, outputId) {
+    var dateEl = document.getElementById(dateId);
+    var weeksEl = document.getElementById(weeksId);
+    var out = document.getElementById(outputId);
+    if (!dateEl || !out) { return; }
+
+    var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    function mondayOf(d) {
+      var copy = new Date(d.getTime());
+      // getDay() is 0 for Sunday, so Sunday steps back six days, not none.
+      var back = (copy.getDay() + 6) % 7;
+      copy.setDate(copy.getDate() - back);
+      return copy;
+    }
+
+    function fmt(d, withYear) {
+      return DAYS[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()] +
+             (withYear ? " " + d.getFullYear() : "");
+    }
+
+    function update() {
+      if (!dateEl.value) { out.textContent = "—"; return; }
+
+      // Parse as local, not UTC: new Date("2026-09-14") is UTC midnight and
+      // can land on the previous day west of Greenwich.
+      var parts = dateEl.value.split("-");
+      var picked = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+      if (isNaN(picked.getTime())) { out.textContent = "—"; return; }
+
+      var weeks = weeksEl ? parseInt(weeksEl.value, 10) || 1 : 1;
+      var start = mondayOf(picked);
+      var end = new Date(start.getTime());
+      end.setDate(end.getDate() + weeks * 7 - 1);
+
+      var label = fmt(start, false) + " to " + fmt(end, true);
+      if (weeks > 1) { label += "  (" + weeks + " rosters)"; }
+      out.textContent = label;
+    }
+
+    dateEl.addEventListener("change", update);
+    dateEl.addEventListener("input", update);
+    if (weeksEl) { weeksEl.addEventListener("change", update); }
+    update();
   };
 
   /** Keep a date range coherent: the end date can never precede the start. */
