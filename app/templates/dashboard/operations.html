@@ -231,9 +231,9 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="row g-3 align-items-center">
+        <div class="row g-3 align-items-start">
           <div class="col-md-4">
-            <div class="chart-box h-sm">
+            <div class="chart-box h-md presence-chart">
               <canvas id="presenceChart" data-chart='{{ {
                 "kind": "presence",
                 "values": [snapshot.on_duty, snapshot.temporarily_out, snapshot.on_leave, snapshot.absent, snapshot.off_duty]

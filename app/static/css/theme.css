@@ -1072,3 +1072,101 @@ body {
   --bs-btn-active-color: #0f2748;
 }
 [data-bs-theme="dark"] .hero-panel__art { opacity: 0.6; }
+
+/* The presence board lists every member of staff, so at hospital scale the
+   card grew to several screens and left the doughnut beside it centred in a
+   column of empty space. The roll now scrolls within a fixed height and the
+   chart sits at the top of its column, which keeps the card a predictable
+   size whatever the headcount. */
+.presence-grid {
+  max-height: 26rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+.presence-grid::-webkit-scrollbar { width: 8px; }
+.presence-grid::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 50rem;
+}
+.presence-grid::-webkit-scrollbar-track { background: transparent; }
+.presence-chart { position: sticky; top: 0.5rem; }
+
+@media (max-width: 767.98px) {
+  /* Stacked, a sticky chart and an inner scroll both fight the page scroll. */
+  .presence-chart { position: static; }
+  .presence-grid { max-height: none; overflow-y: visible; }
+}
+
+/* ---------- Topbar identity and sidebar footer card -------------------
+   The identity block used to sit at the foot of the sidebar. It is now in the
+   topbar, which is where a user looks for it, and frees the foot of the
+   navigation for something more useful. */
+.topbar__who {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 50rem;
+  padding: 0.25rem 0.7rem 0.25rem 0.25rem;
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  color: var(--ink);
+  max-width: 15rem;
+}
+.topbar__who:hover { border-color: var(--brand); }
+.topbar__who-text { min-width: 0; }
+.topbar__who-text strong {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar__who-text small {
+  display: block;
+  font-size: 0.67rem;
+  color: var(--ink-muted);
+  line-height: 1.2;
+}
+.dropdown-header { font-size: 0.72rem; line-height: 1.45; }
+
+/* The card at the foot of the sidebar. Deliberately the one saturated block
+   in the navigation, so it reads as an action rather than another menu row. */
+.side-card {
+  margin: 0.5rem 0.75rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-inner);
+  background: linear-gradient(150deg, var(--brand-dark), var(--brand));
+  color: #fff;
+}
+.side-card strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.side-card p {
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0.3rem 0 0.65rem;
+}
+.side-card__btn {
+  display: block;
+  text-align: center;
+  background: #fff;
+  color: var(--brand-dark);
+  font-size: 0.73rem;
+  font-weight: 650;
+  padding: 0.34rem 0.5rem;
+  border-radius: 50rem;
+  text-decoration: none;
+}
+.side-card__btn:hover { background: #eaf1fb; color: var(--brand-darker); }
+[data-bs-theme="dark"] .side-card {
+  background: linear-gradient(150deg, #14355e, #1c4c85);
+}
+[data-bs-theme="dark"] .side-card__btn { color: #14355e; }

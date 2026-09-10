@@ -112,15 +112,21 @@
       {% endif %}
     </nav>
 
+    {# The identity block moved to the topbar; this space now carries whatever
+       is most worth surfacing at the foot of the navigation. Managers get the
+       action, everyone else the thing they most often come here to check. #}
     <div class="sidebar__foot">
-      <a class="sidebar__who" href="{{ url_for('profile.me') }}">
-        <span class="avatar">{{ current_user.initials }}</span>
-        <span>
-          <strong>{{ current_user.full_name }}</strong>
-          <small>{{ current_user.role_label }}</small>
-        </span>
-      </a>
-      <a class="nav-link" href="{{ url_for('auth.logout') }}">{{ icon('logout') }} Sign out</a>
+      <div class="side-card">
+        {% if current_user.has_oversight or current_user.is_manager %}
+        <strong>Next week's roster</strong>
+        <p>Generate and publish before Friday so staff can plan around it.</p>
+        <a class="side-card__btn" href="{{ url_for('schedule.generate') }}">Generate roster</a>
+        {% else %}
+        <strong>Your week</strong>
+        <p>Check your shifts and request leave before the roster is published.</p>
+        <a class="side-card__btn" href="{{ url_for('schedule.my_schedule') }}">View my schedule</a>
+        {% endif %}
+      </div>
     </div>
   </aside>
 
@@ -143,6 +149,29 @@
           <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>
         </svg>
       </button>
+
+      {# Identity, moved here from the foot of the sidebar. A menu rather than
+         a plain link, so signing out does not need a trip to the profile. #}
+      <div class="dropdown flex-shrink-0">
+        <button class="topbar__who" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="avatar">{{ current_user.initials }}</span>
+          <span class="topbar__who-text d-none d-xl-block">
+            <strong>{{ current_user.full_name }}</strong>
+            <small>{{ current_user.role_label }}</small>
+          </span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li class="dropdown-header">
+            {{ current_user.full_name }}<br>
+            <span class="text-secondary">{{ current_user.staff_no }}</span>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('profile.me') }}">My profile</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}">Change password</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sign out</a></li>
+        </ul>
+      </div>
     </header>
 
     <div class="app-content">
