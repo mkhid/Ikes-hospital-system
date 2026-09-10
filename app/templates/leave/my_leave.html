@@ -97,7 +97,7 @@
               <td class="text-secondary">
                 {% if row.reviewed_by %}
                   {{ row.reviewed_by.full_name }}<br>
-                  <span style="font-size:.68rem">{{ row.reviewed_at|dt('%d %b, %H:%M') }}</span>
+                  <span style="font-size:.68rem">{{ row.reviewed_at|dt('%d/%m, %H:%M') }}</span>
                 {% else %}Awaiting review{% endif %}
               </td>
               <td>

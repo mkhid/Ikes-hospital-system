@@ -116,7 +116,7 @@
       <tbody>
         {% for row in rows %}
         <tr>
-          <td class="text-secondary text-nowrap" style="font-size:.7rem">{{ row.created_at|dt('%d %b, %H:%M:%S') }}</td>
+          <td class="text-secondary text-nowrap" style="font-size:.7rem">{{ row.created_at|dt('%d/%m, %H:%M:%S') }}</td>
           <td>
             <span class="badge-soft {{ {'EMAIL':'blue','SMS':'amber','IN_APP':'brand'}.get(row.channel,'grey') }}">
               {{ row.channel|titleise }}</span>

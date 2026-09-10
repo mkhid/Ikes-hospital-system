@@ -39,7 +39,7 @@
           <td class="text-nowrap">{{ row.period_label }}</td>
           <td class="text-end fw-semibold">{{ row.days }}</td>
           <td class="text-secondary">{{ row.reason or 'Not stated' }}</td>
-          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.created_at|dt('%d %b, %H:%M') }}</td>
+          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.created_at|dt('%d/%m, %H:%M') }}</td>
           <td>
             <form method="post" action="{{ url_for('leave.approve', request_id=row.id) }}"
                   class="d-flex gap-2 mb-1">
@@ -90,7 +90,7 @@
               {{ row.status|titleise }}</span>
           </td>
           <td class="text-secondary">{{ row.reviewed_by.full_name if row.reviewed_by else '-' }}</td>
-          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.reviewed_at|dt('%d %b, %H:%M') }}</td>
+          <td class="text-secondary text-nowrap" style="font-size:.68rem">{{ row.reviewed_at|dt('%d/%m, %H:%M') }}</td>
           <td>
             {% if row.shifts_released %}
               {{ row.shifts_released }} released &middot;

@@ -64,7 +64,7 @@
           {% for row in rows %}
           <tr>
             <td class="fw-semibold">{{ department.name }}</td>
-            <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+            <td class="text-nowrap">{{ row.work_date|d('%a %d/%m') }}</td>
             <td>
               <span class="badge-soft red">{{ row.shift.short_name }}</span>
               <span class="text-secondary">{{ row.shift.window_label }}</span>
@@ -298,7 +298,7 @@
         <ul class="timeline">
           {% for entry in recent_activity %}
           <li>
-            <time>{{ entry.created_at|dt('%d %b, %H:%M') }} &middot; {{ entry.actor_name }}</time>
+            <time>{{ entry.created_at|dt('%d/%m, %H:%M') }} &middot; {{ entry.actor_name }}</time>
             {{ entry.summary }}
           </li>
           {% endfor %}

@@ -62,7 +62,7 @@
             {% set row = assignments_by_date.get(day) %}
             <tr>
               <td class="fw-semibold">{{ day.strftime('%A') }}</td>
-              <td class="text-secondary text-nowrap">{{ day|d('%d %b') }}</td>
+              <td class="text-secondary text-nowrap">{{ day|d('%d/%m') }}</td>
               {% if row %}
               <td>
                 <span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span>
@@ -135,7 +135,7 @@
         <div class="alert alert-light border py-2 px-3 small mb-3">
           <strong>{{ attendance.assignment.shift.short_name }} shift</strong> &middot;
           {{ attendance.assignment.shift.window_label }}<br>
-          <span class="text-secondary">{{ attendance.assignment.work_date|d('%A %d %B') }}</span>
+          <span class="text-secondary">{{ attendance.assignment.work_date|d('%A %d/%m') }}</span>
         </div>
         {% else %}
         <div class="alert alert-warning py-2 px-3 small mb-3">
@@ -180,7 +180,7 @@
         <ul class="timeline">
           {% for row in upcoming %}
           <li>
-            <time>{{ row.work_date|d('%A %d %B') }}</time>
+            <time>{{ row.work_date|d('%A %d/%m') }}</time>
             <strong>{{ row.shift.short_name }}</strong>
             <span class="text-secondary">{{ row.shift.window_label }}</span>
             {% if row.status == 'REPLACEMENT' %}<span class="badge-soft amber">Cover</span>{% endif %}
@@ -205,7 +205,7 @@
         <ul class="timeline">
           {% for note in notifications %}
           <li>
-            <time>{{ note.created_at|dt('%d %b, %H:%M') }}</time>
+            <time>{{ note.created_at|dt('%d/%m, %H:%M') }}</time>
             <strong>{{ note.subject }}</strong>
           </li>
           {% endfor %}

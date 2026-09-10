@@ -102,7 +102,7 @@
         {% for entry in entries %}
         <tr>
           <td class="font-mono text-secondary">{{ entry.id }}</td>
-          <td class="text-nowrap">{{ entry.created_at|dt('%d %b, %H:%M:%S') }}</td>
+          <td class="text-nowrap">{{ entry.created_at|dt('%d/%m, %H:%M:%S') }}</td>
           <td class="fw-semibold">{{ entry.actor_name }}</td>
           <td><span class="badge-soft grey">{{ entry.actor_role|titleise }}</span></td>
           <td>

@@ -266,7 +266,7 @@ def notify_roster_published(roster, recipients):
         )
         if shifts:
             lines = [
-                f"  {format_d(a.work_date, '%a %d %b')}  "
+                f"  {format_d(a.work_date, '%a %d/%m')}  "
                 f"{a.shift.short_name:<10} {a.shift.window_label}"
                 for a in shifts
             ]
@@ -274,7 +274,7 @@ def notify_roster_published(roster, recipients):
             sms = (
                 f"{hospital}: {department} roster for {roster.period_label} is "
                 f"published. You have {len(shifts)} shift(s). First: "
-                f"{format_d(shifts[0].work_date, '%a %d %b')} "
+                f"{format_d(shifts[0].work_date, '%a %d/%m')} "
                 f"{shifts[0].shift.short_name}. Sign in to view."
             )
         else:
@@ -312,7 +312,7 @@ def notify_replacement(assignment, replacement, reason):
         "SYSTEM_NAME", "Workforce Scheduling System"
     )
     shift = assignment.shift
-    when = format_d(assignment.work_date, "%A %d %B %Y")
+    when = format_d(assignment.work_date, "%A %d/%m/%Y")
     body = (
         f"Dear {replacement.first_name},\n\n"
         f"You have been assigned to cover the {shift.short_name.lower()} shift "
@@ -324,12 +324,12 @@ def notify_replacement(assignment, replacement, reason):
     )
     sms = (
         f"{hospital}: You are now covering the {shift.short_name.lower()} shift "
-        f"({shift.window_label}) on {format_d(assignment.work_date, '%a %d %b')}. "
+        f"({shift.window_label}) on {format_d(assignment.work_date, '%a %d/%m')}. "
         f"Reason: {reason}"
     )
     return dispatch(
         replacement,
-        f"Replacement shift assigned: {format_d(assignment.work_date, '%a %d %b')}",
+        f"Replacement shift assigned: {format_d(assignment.work_date, '%a %d/%m')}",
         body,
         category="REPLACEMENT",
         sms_body=sms,
@@ -403,7 +403,7 @@ def notify_leave_submitted(leave_request, approvers):
 def notify_coverage_gap(department, gaps, managers):
     """Escalate shifts the re-optimiser could not fill to the manager and HR."""
     lines = [
-        f"  {format_d(g['work_date'], '%a %d %b')}  {g['shift'].short_name} "
+        f"  {format_d(g['work_date'], '%a %d/%m')}  {g['shift'].short_name} "
         f"({g['shift'].window_label})"
         for g in gaps
     ]

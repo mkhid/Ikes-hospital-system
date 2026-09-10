@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page_title %}My schedule{% endblock %}
 {% block heading %}My schedule{% endblock %}
-{% block subheading %}{{ start|d('%d %b') }} to {{ end|d('%d %b %Y') }} &middot; {{ current_user.department.name }}{% endblock %}
+{% block subheading %}{{ start|d('%d/%m/%Y') }} to {{ end|d('%d/%m/%Y') }} &middot; {{ current_user.department.name }}{% endblock %}
 
 {% block topbar_actions %}
 <div class="d-flex gap-2 flex-shrink-0">
@@ -66,7 +66,7 @@
         {% set row = by_date.get(day) %}
         <tr>
           <td class="fw-semibold">{{ day.strftime('%A') }}</td>
-          <td class="text-secondary text-nowrap">{{ day|d('%d %b') }}</td>
+          <td class="text-secondary text-nowrap">{{ day|d('%d/%m') }}</td>
           {% if row %}
           <td><span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span></td>
           <td class="font-mono">{{ row.start_at|dt('%H:%M') }}</td>

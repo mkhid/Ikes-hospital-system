@@ -65,8 +65,8 @@ def _generation_messages(generated, skipped):
         period = (
             generated[0].roster.period_label
             if weeks == 1
-            else f"{generated[0].roster.week_start:%d %b} to "
-                 f"{generated[-1].roster.week_end:%d %b %Y}"
+            else f"{generated[0].roster.week_start:%d/%m/%Y} to "
+                 f"{generated[-1].roster.week_end:%d/%m/%Y}"
         )
         noun = "roster" if weeks == 1 else f"{weeks} rosters"
 

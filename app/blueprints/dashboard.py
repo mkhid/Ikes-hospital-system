@@ -82,7 +82,7 @@ def _staff_dashboard():
 
     return render_template(
         "dashboard/staff.html",
-        week_label=f"{start.strftime('%d %b')} - {end.strftime('%d %b %Y')}",
+        week_label=f"{start.strftime('%d/%m/%Y')} - {end.strftime('%d/%m/%Y')}",
         week_dates=[start + timedelta(days=i) for i in range(7)],
         assignments=assignments,
         assignments_by_date={a.work_date: a for a in assignments},
@@ -142,7 +142,7 @@ def _operational_dashboard():
         "dashboard/operations.html",
         snapshot=snapshot,
         report=report,
-        week_label=f"{start.strftime('%d %b')} - {end.strftime('%d %b %Y')}",
+        week_label=f"{start.strftime('%d/%m/%Y')} - {end.strftime('%d/%m/%Y')}",
         pending_leave=pending_leave,
         gaps=gaps,
         roster_status=roster_status,

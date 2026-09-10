@@ -60,9 +60,22 @@ def humanise_duration(minutes):
     return f"{sign}{remainder}m"
 
 
-def format_dt(value, fmt="%d %b %Y, %H:%M"):
+# Dates render day-first and numeric throughout the portal, which is the
+# convention in Ghana: 03/09/2026, never 09/03/2026 or 3 Sep 2026.
+#
+# These are the defaults behind the `|dt` and `|d` Jinja filters. Anywhere a
+# weekday name is wanted alongside the date, the call site adds it and keeps
+# the numeric date - "Monday 14/09/2026", "Mon 14/09" - so the day-first
+# reading never varies. If the format ever has to change, change it here and
+# grep for "%d/%m" to catch the call sites that spell it out.
+DATE_FMT = "%d/%m/%Y"
+DATETIME_FMT = "%d/%m/%Y %H:%M"
+SHORT_DATE_FMT = "%d/%m"
+
+
+def format_dt(value, fmt=DATETIME_FMT):
     return value.strftime(fmt) if value else "-"
 
 
-def format_d(value, fmt="%d %b %Y"):
+def format_d(value, fmt=DATE_FMT):
     return value.strftime(fmt) if value else "-"

@@ -388,7 +388,7 @@ def attendance_report_pdf(records, start_date, end_date, department=None):
     for index, record in enumerate(records, start=1):
         rows.append(
             [
-                format_d(record.work_date, "%d %b"),
+                format_d(record.work_date, "%d/%m"),
                 Paragraph(record.staff.full_name, styles["cell"]),
                 record.staff.department.code if record.staff.department else "-",
                 record.shift.short_name if record.shift else "-",
@@ -457,7 +457,7 @@ def audit_trail_pdf(entries, start_date, end_date):
         rows.append(
             [
                 entry.id,
-                format_dt(entry.created_at, "%d %b %H:%M:%S"),
+                format_dt(entry.created_at, "%d/%m %H:%M:%S"),
                 Paragraph(entry.actor_name or "System", styles["cell"]),
                 entry.actor_role or "-",
                 entry.action.replace("_", " ").title(),

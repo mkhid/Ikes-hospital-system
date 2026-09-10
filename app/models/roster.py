@@ -55,8 +55,8 @@ class Roster(db.Model):
     @property
     def period_label(self):
         return (
-            f"{self.week_start.strftime('%d %b')} - "
-            f"{self.week_end.strftime('%d %b %Y')}"
+            f"{self.week_start.strftime('%d/%m/%Y')} - "
+            f"{self.week_end.strftime('%d/%m/%Y')}"
         )
 
     # --- Aggregates -------------------------------------------------------

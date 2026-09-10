@@ -2,7 +2,7 @@
 {% block page_title %}Reassign shift{% endblock %}
 {% block heading %}Reassign shift{% endblock %}
 {% block subheading %}
-  {{ assignment.shift.short_name }} &middot; {{ assignment.work_date|d('%A %d %B %Y') }} &middot; {{ department.name }}
+  {{ assignment.shift.short_name }} &middot; {{ assignment.work_date|d('%A %d/%m/%Y') }} &middot; {{ department.name }}
 {% endblock %}
 
 {% block content %}
@@ -17,7 +17,7 @@
               {{ assignment.shift.window_label }} ({{ assignment.shift.duration_hours }}h)</dd>
 
           <dt class="col-4 text-secondary fw-normal">Date</dt>
-          <dd class="col-8">{{ assignment.work_date|d('%A %d %B %Y') }}
+          <dd class="col-8">{{ assignment.work_date|d('%A %d/%m/%Y') }}
               {% if assignment.falls_on_weekend %}<span class="badge-soft amber">Weekend</span>{% endif %}</dd>
 
           <dt class="col-4 text-secondary fw-normal">Currently</dt>

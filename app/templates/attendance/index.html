@@ -23,7 +23,7 @@
         {% if status.assignment %}
         <div class="alert alert-light border py-2 px-3 small mb-3">
           <strong>{{ status.assignment.shift.name }}</strong><br>
-          {{ status.assignment.work_date|d('%A %d %B') }} &middot;
+          {{ status.assignment.work_date|d('%A %d/%m') }} &middot;
           {{ status.assignment.shift.window_label }}
           ({{ status.assignment.shift.duration_hours }}h)
         </div>
@@ -155,7 +155,7 @@
           <tbody>
             {% for row in history %}
             <tr>
-              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d/%m') }}</td>
               <td>{% if row.shift %}<span class="badge-soft brand">{{ row.shift.short_name }}</span>
                   {% else %}<span class="text-secondary">Unrostered</span>{% endif %}</td>
               <td class="font-mono">{{ row.sign_in_at|dt('%H:%M') }}</td>

@@ -207,13 +207,13 @@ def override_assignment(assignment, new_staff, actor, reason=None, notify=True):
         if previous is not None:
             notifications.dispatch(
                 previous,
-                f"Shift removed: {format_d(assignment.work_date, '%a %d %b')}",
+                f"Shift removed: {format_d(assignment.work_date, '%a %d/%m')}",
                 (
                     f"Dear {previous.first_name},\n\n"
                     f"You have been removed from the "
                     f"{assignment.shift.short_name.lower()} shift "
                     f"({assignment.shift.window_label}) on "
-                    f"{format_d(assignment.work_date, '%A %d %B %Y')}.\n\n"
+                    f"{format_d(assignment.work_date, '%A %d/%m/%Y')}.\n\n"
                     f"Reason: {assignment.change_reason}\n\n"
                     f"{new_staff.full_name} will cover this shift."
                 ),

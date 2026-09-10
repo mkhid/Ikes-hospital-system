@@ -116,7 +116,7 @@
           <tbody>
             {% for row in upcoming %}
             <tr>
-              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d/%m') }}</td>
               <td><span class="badge-soft {{ 'blue' if row.is_night else 'brand' }}">{{ row.shift.short_name }}</span></td>
               <td class="font-mono">{{ row.shift.window_label }}</td>
               <td>{% if row.status == 'REPLACEMENT' %}<span class="badge-soft amber">Cover</span>
@@ -142,7 +142,7 @@
           <tbody>
             {% for row in recent_attendance %}
             <tr>
-              <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+              <td class="text-nowrap">{{ row.work_date|d('%a %d/%m') }}</td>
               <td class="font-mono">{{ row.sign_in_at|dt('%H:%M') }}</td>
               <td class="font-mono">{{ row.sign_out_at|dt('%H:%M') if row.sign_out_at else '-' }}</td>
               <td class="text-end">{{ row.worked_minutes|duration }}</td>

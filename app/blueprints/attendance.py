@@ -261,12 +261,12 @@ def mark_absentees():
     flagged = attendance_service.mark_absentees(work_date, actor=current_user)
     if flagged:
         flash(
-            f"{len(flagged)} staff flagged absent for {work_date.strftime('%d %b %Y')}.",
+            f"{len(flagged)} staff flagged absent for {work_date.strftime('%d/%m/%Y')}.",
             "warning",
         )
     else:
         flash(
-            f"No unexplained absences found for {work_date.strftime('%d %b %Y')}.",
+            f"No unexplained absences found for {work_date.strftime('%d/%m/%Y')}.",
             "success",
         )
     return redirect(url_for("attendance.register", start=work_date, end=work_date))

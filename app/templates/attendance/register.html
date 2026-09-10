@@ -51,7 +51,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="date" value="{{ end.isoformat() }}">
       <button class="btn btn-outline-secondary btn-sm" type="submit">
-        Flag absentees for {{ end|d('%d %b') }}
+        Flag absentees for {{ end|d('%d/%m/%Y') }}
       </button>
       <span class="text-secondary" style="font-size:.72rem">
         Marks anyone rostered on a completed shift that day who never signed in.
@@ -108,7 +108,7 @@
       <tbody>
         {% for row in records %}
         <tr>
-          <td class="text-nowrap">{{ row.work_date|d('%a %d %b') }}</td>
+          <td class="text-nowrap">{{ row.work_date|d('%a %d/%m') }}</td>
           <td>
             <a href="{{ url_for('profile.view', staff_id=row.staff.id) }}" class="fw-semibold text-decoration-none">
               {{ row.staff.full_name }}</a>

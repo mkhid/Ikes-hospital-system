@@ -67,10 +67,10 @@ class LeaveRequest(db.Model):
     @property
     def period_label(self):
         if self.start_date == self.end_date:
-            return self.start_date.strftime("%d %b %Y")
+            return self.start_date.strftime("%d/%m/%Y")
         return (
-            f"{self.start_date.strftime('%d %b')} - "
-            f"{self.end_date.strftime('%d %b %Y')}"
+            f"{self.start_date.strftime('%d/%m/%Y')} - "
+            f"{self.end_date.strftime('%d/%m/%Y')}"
         )
 
     def covers(self, work_date):

@@ -2,7 +2,7 @@
 {% block page_title %}{{ department.name }} roster{% endblock %}
 {% block heading %}{{ department.name }} duty roster{% endblock %}
 {% block subheading %}
-  {{ start|d('%d %b') }} to {{ (dates|last)|d('%d %b %Y') }}
+  {{ start|d('%d/%m/%Y') }} to {{ (dates|last)|d('%d/%m/%Y') }}
   {%- if roster %} &middot; {{ roster.live_assignments()|length }} shifts &middot;
     {{ 'Published' if roster.is_published else 'Draft' }}{% endif %}
 {% endblock %}
@@ -147,7 +147,7 @@
           <th class="shift-col">Shift</th>
           {% for day in dates %}
           <th class="day-col {{ 'is-weekend' if day.weekday() >= 5 }}">
-            {{ day.strftime('%a') }}<span>{{ day.strftime('%d %b') }}</span>
+            {{ day.strftime('%a') }}<span>{{ day.strftime('%d/%m') }}</span>
           </th>
           {% endfor %}
         </tr>
