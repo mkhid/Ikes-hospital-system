@@ -7,9 +7,8 @@
   <nav class="hero-auth__nav">
     <div class="hero-auth__brand">
       <span class="hero-auth__mark">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
+        <img src="{{ url_for('static', filename='img/logo.png') }}"
+             alt="{{ hospital_name }} logo" width="26" height="30">
       </span>
       <span>{{ hospital_name }}<small>{{ system_name }}</small></span>
     </div>

@@ -22,6 +22,8 @@
 {%- set ep = request.endpoint or '' -%}
 <title>{% block page_title %}{{ system_name }}{% endblock %}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
 
@@ -29,8 +31,12 @@
 <div class="app-shell">
   <aside class="sidebar">
     <div class="sidebar__brand">
-      <strong>{{ hospital_name }}</strong>
-      <span>{{ system_name }}</span>
+      <img class="sidebar__logo" src="{{ url_for('static', filename='img/logo.png') }}"
+           alt="{{ hospital_name }} logo" width="34" height="39">
+      <div class="min-w-0">
+        <strong>{{ hospital_name }}</strong>
+        <span>{{ system_name }}</span>
+      </div>
     </div>
 
     <nav class="sidebar__nav">
