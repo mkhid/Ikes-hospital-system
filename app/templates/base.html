@@ -20,12 +20,31 @@
 </svg>
 {%- endmacro -%}
 {%- set ep = request.endpoint or '' -%}
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+<meta charset="utf-8">
 <title>{% block page_title %}{{ system_name }}{% endblock %}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+<script>
+  /* Applied before the first paint so a dark-mode user never sees a white
+     flash. Deliberately inline and blocking: an external file would load too
+     late. Falls back to the operating system setting on a first visit. */
+  (function () {
+    try {
+      var saved = localStorage.getItem("theme");
+      var theme = saved
+        || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-bs-theme", theme);
+    } catch (e) { /* private mode: keep the light default */ }
+  })();
+</script>
+</head>
+<body>
 
 {% block layout %}
 <div class="app-shell">
@@ -112,6 +131,18 @@
         <p>{% block subheading %}{% endblock %}</p>
       </div>
       {% block topbar_actions %}{% endblock %}
+      <button class="icon-btn" type="button" id="theme-toggle"
+              aria-label="Switch between light and dark theme" title="Switch theme">
+        <svg class="icon-btn__sun" viewBox="0 0 24 24" width="17" height="17" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/>
+        </svg>
+        <svg class="icon-btn__moon" viewBox="0 0 24 24" width="17" height="17" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>
+        </svg>
+      </button>
     </header>
 
     <div class="app-content">
@@ -135,3 +166,5 @@
 <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -13,32 +13,104 @@
    with no internet connection.
    ========================================================================== */
 
-/* ---------- 1. Palette ---------------------------------------------- */
-:root {
+/* ---------- 1. Palette ----------------------------------------------
+   Two themes off one set of semantic tokens. Everything below this block
+   refers to --surface, --ink, --line and friends rather than to a literal
+   colour, so a theme is defined once here and the rest of the file follows.
+
+   The switch is Bootstrap 5.3's own data-bs-theme attribute on <html>, which
+   also flips Bootstrap's internal component colours, so cards, tables, forms
+   and dropdowns come along without being restyled individually.
+
+   The brand blue is shared: it is the identity in both themes. Only its soft
+   tint changes, because a pale tint made for white is invisible on dark.
+   -------------------------------------------------------------------- */
+:root,
+[data-bs-theme="light"] {
   --brand: #1a5fb4;
   --brand-dark: #17529c;
   --brand-darker: #134487;
   --brand-soft: #e7f0fb;
-  --sidebar-bg: #111e30;
-  --sidebar-ink: #c6d5e8;
-  --sidebar-muted: #8497b3;
 
-  /* Bootstrap global tokens */
-  --bs-primary: #1a5fb4;
-  --bs-primary-rgb: 26, 95, 180;
-  --bs-link-color: #1a5fb4;
-  --bs-link-color-rgb: 26, 95, 180;
-  --bs-link-hover-color: #17529c;
-  --bs-body-color: #16202b;
-  --bs-body-bg: #f4f7fb;
-  --bs-border-color: #dde5ee;
-  --bs-secondary-color: #6b7c8f;
+  /* Surfaces: the page, a card, and a panel inset within a card. */
+  --canvas: #f1f4f9;
+  --surface: #ffffff;
+  --surface-2: #f5f7fb;
+  --surface-3: #eef2f8;
+
+  --ink: #16202b;
+  --ink-muted: #6b7c8f;
+  --ink-faint: #93a1b3;
+  --line: #e7edf5;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-ink: #55637a;
+  --sidebar-muted: #93a1b3;
+  --sidebar-line: #eef2f7;
+
+  /* Soft and diffuse rather than a hard drop, which is what gives the cards
+     their lift without an outline. */
+  --shadow-card: 0 1px 2px rgba(17, 34, 61, 0.04), 0 6px 20px rgba(17, 34, 61, 0.05);
+  --shadow-raised: 0 2px 6px rgba(17, 34, 61, 0.06), 0 14px 34px rgba(17, 34, 61, 0.09);
+}
+
+[data-bs-theme="dark"] {
+  --brand: #4a90e2;
+  --brand-dark: #6aa6ea;
+  --brand-darker: #85b8f0;
+  --brand-soft: #17304d;
+
+  --canvas: #0d1520;
+  --surface: #151f2c;
+  --surface-2: #1b2635;
+  --surface-3: #212e40;
+
+  --ink: #e6edf6;
+  --ink-muted: #93a5bd;
+  --ink-faint: #6d809a;
+  --line: #24334a;
+
+  --sidebar-bg: #111a26;
+  --sidebar-ink: #a8b8cd;
+  --sidebar-muted: #6d809a;
+  --sidebar-line: #1e2b3d;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.28);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.36), 0 14px 34px rgba(0, 0, 0, 0.42);
+}
+
+/* Shape. One radius scale, applied to cards, tiles, inputs and buttons alike -
+   the rounding is most of what distinguishes this look from a stock admin
+   template. */
+:root {
+  --radius-card: 1.05rem;
+  --radius-inner: 0.75rem;
+  --radius-chip: 0.7rem;
+
   --bs-body-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --bs-body-font-size: 0.9rem;
-  --bs-border-radius: 0.6rem;
-  --bs-border-radius-sm: 0.4rem;
+  --bs-border-radius: var(--radius-inner);
+  --bs-border-radius-sm: 0.5rem;
+  --bs-border-radius-lg: var(--radius-card);
 }
+
+/* Bootstrap's own tokens, pointed at the semantic ones above so both themes
+   are driven from a single place. */
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+  --bs-primary: var(--brand);
+  --bs-link-color: var(--brand);
+  --bs-link-hover-color: var(--brand-dark);
+  --bs-body-color: var(--ink);
+  --bs-body-bg: var(--canvas);
+  --bs-border-color: var(--line);
+  --bs-secondary-color: var(--ink-muted);
+  --bs-emphasis-color: var(--ink);
+}
+[data-bs-theme="light"] { --bs-primary-rgb: 26, 95, 180; --bs-link-color-rgb: 26, 95, 180; }
+[data-bs-theme="dark"]  { --bs-primary-rgb: 74, 144, 226; --bs-link-color-rgb: 74, 144, 226; }
 
 /* Bootstrap compiles component colours at build time, so each themed
    component needs its own local variables redirected to the palette. */
@@ -87,7 +159,7 @@
 }
 
 .table {
-  --bs-table-hover-bg: #f6f9fc;
+  --bs-table-hover-bg: var(--surface-2);
 }
 
 /* Softer, lower-contrast badges than Bootstrap's solid defaults, so a table
@@ -102,15 +174,15 @@
   font-weight: 650;
   line-height: 1.4;
   white-space: nowrap;
-  background: #eef2f6;
-  color: #56657a;
+  background: var(--surface-3);
+  color: var(--ink-muted);
 }
 .badge-soft.green { background: #e5f5ea; color: #157f3d; }
 .badge-soft.amber { background: #fdf1de; color: #a86107; }
 .badge-soft.red   { background: #fdeceb; color: #b3261e; }
 .badge-soft.blue  { background: #ecebfb; color: #5145cd; }
 .badge-soft.brand { background: var(--brand-soft); color: var(--brand-dark); }
-.badge-soft.grey  { background: #eef2f6; color: #64748b; }
+.badge-soft.grey  { background: var(--surface-3); color: var(--ink-muted); }
 
 /* ---------- 2. Application shell ------------------------------------ */
 body {
@@ -127,6 +199,7 @@ body {
   flex: 0 0 238px;
   background: var(--sidebar-bg);
   color: var(--sidebar-ink);
+  border-right: 1px solid var(--sidebar-line);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -137,7 +210,7 @@ body {
 
 .sidebar__brand {
   padding: 1.1rem 1.1rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--sidebar-line);
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -148,7 +221,7 @@ body {
   flex-shrink: 0;
 }
 .sidebar__brand strong {
-  color: #fff;
+  color: var(--ink);
   font-size: 0.9rem;
   display: block;
   line-height: 1.3;
@@ -168,7 +241,7 @@ body {
   font-size: 0.63rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #77899f;
+  color: var(--sidebar-muted);
   padding: 0.85rem 0.6rem 0.35rem;
   font-weight: 600;
 }
@@ -178,20 +251,23 @@ body {
   align-items: center;
   gap: 0.6rem;
   padding: 0.45rem 0.6rem;
-  margin: 0 0.5rem 1px;
-  border-radius: 0.4rem;
+  margin: 0 0.5rem 2px;
+  border-radius: 0.6rem;
   color: var(--sidebar-ink);
   font-size: 0.83rem;
   font-weight: 500;
 }
 .sidebar .nav-link:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: var(--surface-2);
+  color: var(--ink);
 }
+/* Rounded filled pill for the current page, as in the reference. */
 .sidebar .nav-link.active {
   background: var(--brand);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(26, 95, 180, 0.28);
 }
+[data-bs-theme="dark"] .sidebar .nav-link.active { box-shadow: none; }
 .sidebar .nav-link svg {
   width: 16px;
   height: 16px;
@@ -202,7 +278,7 @@ body {
 .sidebar__foot {
   margin-top: auto;
   padding: 0.7rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--sidebar-line);
 }
 .sidebar__who {
   display: flex;
@@ -212,7 +288,7 @@ body {
   text-decoration: none;
 }
 .sidebar__who small { color: var(--sidebar-muted); display: block; line-height: 1.2; }
-.sidebar__who strong { color: #fff; font-size: 0.8rem; display: block; line-height: 1.2; }
+.sidebar__who strong { color: var(--ink); font-size: 0.8rem; display: block; line-height: 1.2; }
 
 .app-main {
   flex: 1;
@@ -222,18 +298,40 @@ body {
 }
 
 .topbar {
-  background: #fff;
-  border-bottom: 1px solid var(--bs-border-color);
-  padding: 0.75rem 1.4rem;
+  background: var(--canvas);
+  padding: 1rem 1.4rem 0.6rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem;
   position: sticky;
   top: 0;
   z-index: 1020;
 }
-.topbar h1 { font-size: 1.12rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-.topbar p { margin: 0; font-size: 0.78rem; color: var(--bs-secondary-color); }
+.topbar h1 { font-size: 1.24rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; color: var(--ink); }
+.topbar p { margin: 0; font-size: 0.78rem; color: var(--ink-muted); }
+
+/* Circular control, as in the reference: theme toggle, and available to any
+   page that wants an icon action beside the heading. */
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-card);
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+.icon-btn:hover { color: var(--brand); border-color: var(--brand); transform: translateY(-1px); }
+.icon-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+/* One button, two glyphs: show whichever the current theme is offering to
+   switch to. */
+[data-bs-theme="light"] .icon-btn__sun,
+[data-bs-theme="dark"] .icon-btn__moon { display: none; }
 
 .app-content {
   padding: 1.25rem 1.4rem 3rem;
@@ -243,12 +341,87 @@ body {
 
 /* ---------- 3. Domain components ------------------------------------ */
 
+/* Cards carry the look: generous radius, a soft diffuse shadow, and no
+   outline. Bootstrap's default is a 1px border and a small radius, which
+   reads as a form panel rather than a dashboard surface. */
+.card {
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--line);
+  padding: 0.9rem 1.1rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+.card-body { padding: 1.1rem; }
+.card-footer { background: transparent; border-top: 1px solid var(--line); }
+
+/* Panels sitting inside a card - the grade tiles in the reference. Flat and
+   tinted rather than shadowed, so they read as inset. */
+.panel-inset {
+  background: var(--surface-2);
+  border-radius: var(--radius-inner);
+  padding: 0.9rem;
+}
+
+/* Soft tinted icon chip beside a metric, as in "Heart Rate" / "Glucose". */
+.icon-chip {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.icon-chip.green { background: #e5f5ea; color: #157f3d; }
+.icon-chip.amber { background: #fdf1de; color: #a86107; }
+.icon-chip.red   { background: #fdeceb; color: #b3261e; }
+.icon-chip.indigo{ background: #ecebfb; color: #5145cd; }
+[data-bs-theme="dark"] .icon-chip.green { background: #12301f; color: #57d98a; }
+[data-bs-theme="dark"] .icon-chip.amber { background: #33260f; color: #e8b061; }
+[data-bs-theme="dark"] .icon-chip.red   { background: #351b1a; color: #f08a84; }
+[data-bs-theme="dark"] .icon-chip.indigo{ background: #221f45; color: #9d95f5; }
+
+/* Segmented pill control - the Week / Month / Year toggle. */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border-radius: 50rem;
+}
+.segmented > a,
+.segmented > button {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.28rem 0.85rem;
+  border-radius: 50rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.segmented > .active {
+  background: var(--surface);
+  color: var(--brand);
+  box-shadow: var(--shadow-card);
+}
+
 /* KPI tile */
 .stat-tile {
-  background: #fff;
-  border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  padding: 0.85rem 0.95rem;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.1rem;
   height: 100%;
 }
 .stat-tile__label {
@@ -265,7 +438,7 @@ body {
   margin-top: 0.15rem;
   letter-spacing: -0.02em;
 }
-.stat-tile__meta { font-size: 0.75rem; color: #56657a; margin-top: 0.15rem; }
+.stat-tile__meta { font-size: 0.75rem; color: var(--ink-muted); margin-top: 0.15rem; }
 .stat-tile.is-green .stat-tile__value { color: #157f3d; }
 .stat-tile.is-amber .stat-tile__value { color: #a86107; }
 .stat-tile.is-red   .stat-tile__value { color: #b3261e; }
@@ -292,7 +465,7 @@ body {
 }
 .roster-table th {
   padding: 0.5rem 0.6rem;
-  background: #f8fafc;
+  background: var(--surface-2);
   border-bottom: 1px solid var(--bs-border-color);
   text-align: left;
   font-size: 0.65rem;
@@ -309,16 +482,16 @@ body {
   text-transform: none;
   letter-spacing: 0;
 }
-.roster-table th.is-weekend { background: #fdf6ec; }
+.roster-table th.is-weekend { background: var(--surface-3); }
 .roster-table td {
   padding: 0.4rem;
-  border-bottom: 1px solid #eef3f8;
-  border-left: 1px solid #eef3f8;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
   vertical-align: top;
 }
-.roster-table td.is-weekend { background: #fffdf8; }
+.roster-table td.is-weekend { background: var(--surface-2); }
 .roster-table .shift-col {
-  background: #f8fafc;
+  background: var(--surface-2);
   font-weight: 600;
   white-space: nowrap;
   border-left: 0;
@@ -343,7 +516,7 @@ body {
 }
 .shift-chip:last-child { margin-bottom: 0; }
 .shift-chip strong { display: block; font-weight: 600; color: var(--bs-body-color); }
-.shift-chip small { color: #56657a; font-size: 0.66rem; }
+.shift-chip small { color: var(--ink-muted); font-size: 0.66rem; }
 .shift-chip a { color: inherit; text-decoration: none; }
 .shift-chip a:hover { text-decoration: underline; }
 .shift-chip.is-replacement { background: #fdf1de; border-left-color: #a86107; }
@@ -354,7 +527,7 @@ body {
 .shift-empty {
   display: block;
   padding: 0.35rem 0.45rem;
-  color: #b8c4d1;
+  color: var(--ink-faint);
   font-size: 0.7rem;
   font-style: italic;
 }
@@ -370,9 +543,9 @@ body {
   gap: 0.55rem;
   align-items: center;
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.4rem;
-  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
 }
 .presence-card strong { font-size: 0.78rem; font-weight: 600; line-height: 1.25; display: block; }
 .presence-card small { font-size: 0.68rem; color: var(--bs-secondary-color); }
@@ -420,7 +593,7 @@ body {
   width: 8px; height: 8px;
   border-radius: 50%;
   background: var(--brand);
-  border: 2px solid #fff;
+  border: 2px solid var(--surface);
 }
 .timeline li:last-child { border-left-color: transparent; }
 .timeline time { display: block; color: var(--bs-secondary-color); font-size: 0.68rem; }
@@ -707,3 +880,27 @@ body {
   .sidebar__foot { display: flex; align-items: center; justify-content: space-between; }
   .app-content { padding: 0.9rem; }
 }
+
+/* ---------- Dark-theme corrections ----------------------------------
+   The tinted status colours above are mixed for a white ground. On the dark
+   surface the same tints glare and the foreground text loses contrast, so
+   each one is re-mixed against the dark canvas rather than reused. */
+[data-bs-theme="dark"] .badge-soft.green { background: #12301f; color: #57d98a; }
+[data-bs-theme="dark"] .badge-soft.amber { background: #33260f; color: #e8b061; }
+[data-bs-theme="dark"] .badge-soft.red   { background: #351b1a; color: #f08a84; }
+[data-bs-theme="dark"] .badge-soft.blue  { background: #221f45; color: #9d95f5; }
+[data-bs-theme="dark"] .badge-soft.brand { background: var(--brand-soft); color: #8fbdf0; }
+
+[data-bs-theme="dark"] .shift-chip.is-replacement { background: #33260f; border-left-color: #e8b061; }
+[data-bs-theme="dark"] .shift-chip.is-gap { background: #351b1a; border-left-color: #f08a84; }
+[data-bs-theme="dark"] .shift-chip.is-gap strong { color: #f08a84; }
+
+[data-bs-theme="dark"] .stat-tile.is-green .stat-tile__value { color: #57d98a; }
+[data-bs-theme="dark"] .stat-tile.is-amber .stat-tile__value { color: #e8b061; }
+[data-bs-theme="dark"] .stat-tile.is-red   .stat-tile__value { color: #f08a84; }
+[data-bs-theme="dark"] .stat-tile.is-blue  .stat-tile__value { color: #9d95f5; }
+
+/* Bootstrap's contextual alerts and table stripes are mixed for light too. */
+[data-bs-theme="dark"] .bg-light { background: var(--surface-2) !important; }
+[data-bs-theme="dark"] .text-dark { color: var(--ink) !important; }
+[data-bs-theme="dark"] .border { border-color: var(--line) !important; }

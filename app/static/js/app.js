@@ -25,10 +25,63 @@
   HospitalPortal.palette = PALETTE;
 
   // ------------------------------------------------------------------
+  // Theme
+  // ------------------------------------------------------------------
+  // The chart colours are read back out of the stylesheet rather than
+  // duplicated here, so a palette change in theme.css reaches the charts
+  // without this file being touched, and so the two themes cannot drift apart.
+  function cssVar(name, fallback) {
+    try {
+      var value = global
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue(name)
+        .trim();
+      return value || fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function refreshPalette() {
+    PALETTE.brand = cssVar("--brand", PALETTE.brand);
+    PALETTE.ink = cssVar("--ink", PALETTE.ink);
+    PALETTE.muted = cssVar("--ink-muted", PALETTE.muted);
+    PALETTE.line = cssVar("--line", PALETTE.line);
+    PALETTE.grey = cssVar("--ink-faint", PALETTE.grey);
+  }
+
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-bs-theme") === "dark"
+      ? "dark"
+      : "light";
+  }
+
+  HospitalPortal.setTheme = function (theme) {
+    document.documentElement.setAttribute("data-bs-theme", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch (e) {
+      /* private mode: the choice simply will not persist */
+    }
+    refreshPalette();
+    // Chart.js bakes colours in at construction, so the charts have to be
+    // rebuilt rather than merely re-rendered.
+    if (global.Chart) {
+      applyChartDefaults();
+      HospitalPortal.renderCharts();
+    }
+  };
+
+  HospitalPortal.toggleTheme = function () {
+    HospitalPortal.setTheme(currentTheme() === "dark" ? "light" : "dark");
+  };
+
+  // ------------------------------------------------------------------
   // Chart.js defaults
   // ------------------------------------------------------------------
   function applyChartDefaults() {
     if (!global.Chart) { return false; }
+    refreshPalette();
     var C = global.Chart;
     C.defaults.font.family =
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -37,7 +90,8 @@
     C.defaults.plugins.legend.labels.boxWidth = 10;
     C.defaults.plugins.legend.labels.boxHeight = 10;
     C.defaults.plugins.legend.labels.usePointStyle = true;
-    C.defaults.plugins.tooltip.backgroundColor = "rgba(22, 32, 43, 0.94)";
+    C.defaults.plugins.tooltip.backgroundColor =
+      currentTheme() === "dark" ? "rgba(6, 12, 20, 0.94)" : "rgba(22, 32, 43, 0.94)";
     C.defaults.plugins.tooltip.padding = 9;
     C.defaults.plugins.tooltip.cornerRadius = 5;
     C.defaults.plugins.tooltip.titleFont = { size: 11.5, weight: "600" };
@@ -116,14 +170,14 @@
             label: "Filled",
             data: spec.filled,
             backgroundColor: PALETTE.brand,
-            borderRadius: 3,
+            borderRadius: 6,
             stack: "slots",
           },
           {
             label: "Coverage gap",
             data: spec.gaps,
             backgroundColor: PALETTE.red,
-            borderRadius: 3,
+            borderRadius: 6,
             stack: "slots",
           },
         ],
@@ -149,7 +203,7 @@
             data: spec.values,
             backgroundColor: [PALETTE.brand, PALETTE.blue, PALETTE.ink],
             borderWidth: 2,
-            borderColor: "#fff",
+            borderColor: cssVar("--surface", "#fff"),
           },
         ],
       },
@@ -171,13 +225,13 @@
             label: "Night shifts",
             data: spec.nights,
             backgroundColor: PALETTE.ink,
-            borderRadius: 3,
+            borderRadius: 6,
           },
           {
             label: "Weekend shifts",
             data: spec.weekends,
             backgroundColor: PALETTE.amber,
-            borderRadius: 3,
+            borderRadius: 6,
           },
         ],
       },
@@ -205,13 +259,13 @@
             backgroundColor: PALETTE.brandSoft,
             borderColor: PALETTE.brand,
             borderWidth: 1,
-            borderRadius: 3,
+            borderRadius: 6,
           },
           {
             label: "Hours worked",
             data: spec.worked,
             backgroundColor: PALETTE.brand,
-            borderRadius: 3,
+            borderRadius: 6,
           },
         ],
       },
@@ -244,7 +298,7 @@
               PALETTE.grey,
             ],
             borderWidth: 2,
-            borderColor: "#fff",
+            borderColor: cssVar("--surface", "#fff"),
           },
         ],
       },
@@ -269,7 +323,7 @@
             backgroundColor: spec.values.map(function (v) {
               return v >= 99 ? PALETTE.green : v >= 90 ? PALETTE.amber : PALETTE.red;
             }),
-            borderRadius: 3,
+            borderRadius: 6,
           },
         ],
       },
@@ -470,6 +524,26 @@
   // ------------------------------------------------------------------
   document.addEventListener("DOMContentLoaded", function () {
     HospitalPortal.renderCharts();
+
+    var themeButton = document.getElementById("theme-toggle");
+    if (themeButton) {
+      themeButton.addEventListener("click", HospitalPortal.toggleTheme);
+    }
+
+    // Follow the operating system if the user has never chosen explicitly.
+    // Once they have, their choice wins and this stops applying.
+    try {
+      var media = global.matchMedia("(prefers-color-scheme: dark)");
+      if (media && media.addEventListener) {
+        media.addEventListener("change", function (event) {
+          if (!localStorage.getItem("theme")) {
+            HospitalPortal.setTheme(event.matches ? "dark" : "light");
+          }
+        });
+      }
+    } catch (e) {
+      /* matchMedia or storage unavailable: the default theme stands */
+    }
 
     // Enable Bootstrap tooltips wherever a title is opted in.
     if (global.bootstrap && global.bootstrap.Tooltip) {
