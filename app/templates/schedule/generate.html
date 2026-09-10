@@ -24,18 +24,42 @@
           </div>
 
           <div class="mb-3">
-            <label for="week" class="form-label small fw-semibold">Week commencing</label>
+            <label for="week" class="form-label small fw-semibold">Start date</label>
             <input type="date" class="form-control" id="week" name="week"
                    value="{{ default_week.isoformat() }}" required>
             <div class="form-text">
-              Any date in the target week is accepted; the roster always runs
-              Monday to Sunday.
+              Pick any date. A roster always runs Monday to Sunday, so the date
+              you choose snaps to the start of its week.
             </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="weeks" class="form-label small fw-semibold">How many weeks</label>
+            <select class="form-select" id="weeks" name="weeks">
+              {% for n in week_choices %}
+              <option value="{{ n }}">
+                {{ n }} week{{ '' if n == 1 else 's' }}
+                {%- if n == 1 %} (one roster){% else %} ({{ n }} consecutive rosters){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Each week is generated as its own roster, so you still publish,
+              withdraw and re-optimise them one week at a time.
+            </div>
+          </div>
+
+          <!-- Filled in by JavaScript so the manager sees the exact period the
+               chosen date resolves to, rather than having to infer the snap. -->
+          <div class="alert alert-secondary py-2 px-3 small" id="period-preview"
+               role="status" aria-live="polite">
+            <span class="text-secondary">Period:</span>
+            <strong id="period-text">&mdash;</strong>
           </div>
 
           <div class="alert alert-light border py-2 px-3 small">
             Regenerating replaces an existing draft for the same week. A published
-            roster must be withdrawn first, so staff are never silently moved.
+            roster is skipped and reported, so staff are never silently moved.
           </div>
 
           <button class="btn btn-primary w-100" type="submit">Generate roster</button>
@@ -125,4 +149,10 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  HospitalPortal.previewRosterPeriod("week", "weeks", "period-text");
+</script>
 {% endblock %}

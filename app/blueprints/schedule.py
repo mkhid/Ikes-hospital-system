@@ -34,6 +34,72 @@ def _parse_week(value):
         return week_start()
 
 
+#: How many consecutive weeks may be generated in one action.
+WEEK_COUNT_CHOICES = (1, 2, 4)
+
+
+def _parse_week_count(value):
+    """Clamp the requested run length to a supported choice."""
+    try:
+        weeks = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return weeks if weeks in WEEK_COUNT_CHOICES else 1
+
+
+def _generation_messages(generated, skipped):
+    """
+    Turn a multi-week run into the flash messages the manager sees.
+
+    Reported as one line per outcome rather than one per week, so generating a
+    month does not bury the page under four near-identical notices.
+    """
+    messages = []
+
+    if generated:
+        weeks = len(generated)
+        filled = sum(r.slots_filled for r in generated)
+        required = sum(r.slots_required for r in generated)
+        gaps = sum(r.gap_count for r in generated)
+        seconds = sum(r.seconds for r in generated)
+        period = (
+            generated[0].roster.period_label
+            if weeks == 1
+            else f"{generated[0].roster.week_start:%d %b} to "
+                 f"{generated[-1].roster.week_end:%d %b %Y}"
+        )
+        noun = "roster" if weeks == 1 else f"{weeks} rosters"
+
+        if gaps:
+            messages.append((
+                f"Generated {noun} for {period} with {gaps} coverage gap(s). "
+                f"{filled} of {required} shifts filled in {seconds:.2f}s.",
+                "warning",
+            ))
+        else:
+            improvement = sum(r.improvement_percent for r in generated) / weeks
+            messages.append((
+                f"Generated {noun} for {period}: all {filled} shifts filled in "
+                f"{seconds:.2f}s, fairness improved by {improvement:.0f}% "
+                f"during optimisation.",
+                "success",
+            ))
+
+    if skipped:
+        periods = ", ".join(r.period_label for r in skipped)
+        messages.append((
+            f"Skipped {len(skipped)} already-published week(s): {periods}. "
+            f"Withdraw a roster to draft before regenerating it, so staff are "
+            f"never silently moved.",
+            "info",
+        ))
+
+    if not generated and not skipped:
+        messages.append(("Nothing was generated.", "warning"))
+
+    return messages
+
+
 def _require_department(department_id):
     department = db.session.get(Department, department_id)
     if department is None:
@@ -163,66 +229,58 @@ def generate():
 
     if request.method == "POST":
         department = _require_department(int(request.form.get("department_id", 0)))
-        target_week = _parse_week(request.form.get("week"))
+        first_week = _parse_week(request.form.get("week"))
+        weeks = _parse_week_count(request.form.get("weeks"))
 
-        existing = Roster.query.filter_by(
-            department_id=department.id, week_start=target_week
-        ).first()
-        if existing and existing.is_published and not request.form.get("confirm_replace"):
-            flash(
-                "A published roster already exists for that week. Withdraw it first "
-                "if you want to regenerate.",
-                "warning",
-            )
-            return redirect(
-                url_for(
-                    "schedule.department_roster",
-                    department_id=department.id,
-                    week=target_week.isoformat(),
-                )
-            )
+        # Consecutive Monday-to-Sunday rosters. Generating several in one action
+        # is a convenience over the weekly generation the system is built around,
+        # not a change to it: each week remains its own roster, so publication,
+        # withdrawal and re-optimisation stay per-week.
+        generated, skipped = [], []
 
-        result = generate_roster(department, target_week, actor=current_user)
+        for offset in range(weeks):
+            target_week = first_week + timedelta(weeks=offset)
 
-        audit.record(
-            AuditAction.ROSTER_GENERATED,
-            f"{department.name} roster generated for {result.roster.period_label}. "
-            f"{result.summary}",
-            actor=current_user,
-            entity_type="Roster",
-            entity_id=result.roster.id,
-            department_id=department.id,
-            new={
-                "slots_required": result.slots_required,
-                "slots_filled": result.slots_filled,
-                "coverage_gaps": result.gap_count,
-                "fairness_cost": round(result.cost_after_optimisation, 3),
-                "improvement_percent": result.improvement_percent,
-                "seconds": round(result.seconds, 3),
-            },
-            commit=True,
-        )
+            existing = Roster.query.filter_by(
+                department_id=department.id, week_start=target_week
+            ).first()
+            if existing and existing.is_published:
+                # Never silently replace a roster staff have already been told
+                # about. Skip it and carry on with the rest of the run.
+                skipped.append(existing)
+                continue
 
-        if result.gap_count:
-            flash(
-                f"Roster generated with {result.gap_count} coverage gap(s). "
-                f"{result.slots_filled} of {result.slots_required} shifts filled in "
-                f"{result.seconds:.2f}s.",
-                "warning",
-            )
-        else:
-            flash(
-                f"Roster generated: all {result.slots_filled} shifts filled in "
-                f"{result.seconds:.2f}s, fairness improved by "
-                f"{result.improvement_percent}% during optimisation.",
-                "success",
+            result = generate_roster(department, target_week, actor=current_user)
+            generated.append(result)
+
+            audit.record(
+                AuditAction.ROSTER_GENERATED,
+                f"{department.name} roster generated for {result.roster.period_label}. "
+                f"{result.summary}",
+                actor=current_user,
+                entity_type="Roster",
+                entity_id=result.roster.id,
+                department_id=department.id,
+                new={
+                    "slots_required": result.slots_required,
+                    "slots_filled": result.slots_filled,
+                    "coverage_gaps": result.gap_count,
+                    "fairness_cost": round(result.cost_after_optimisation, 3),
+                    "improvement_percent": result.improvement_percent,
+                    "seconds": round(result.seconds, 3),
+                },
+                commit=True,
             )
 
+        for message, category in _generation_messages(generated, skipped):
+            flash(message, category)
+
+        landing = generated[0].roster.week_start if generated else first_week
         return redirect(
             url_for(
                 "schedule.department_roster",
                 department_id=department.id,
-                week=target_week.isoformat(),
+                week=landing.isoformat(),
             )
         )
 
@@ -230,6 +288,7 @@ def generate():
         "schedule/generate.html",
         departments=departments,
         default_week=default_week,
+        week_choices=WEEK_COUNT_CHOICES,
         shifts=Shift.query.order_by(Shift.sort_order).all(),
     )
 
