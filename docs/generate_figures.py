@@ -1,8 +1,14 @@
 """
-Generate the six code figures for the thesis.
+Generate the code figures for the thesis.
 
-One figure per implementation module described in Chapter 4.4, so the figures
-line up with the section of the document they illustrate.
+Ten figures, ordered as a narrative: the scheduling engine first, from its
+top-level two-phase structure down into each phase and the objective it
+minimises, then one figure per remaining implementation module of Chapter 4.4.
+
+    python docs/generate_figures.py
+
+Rebuild after changing any illustrated function, or the line numbers shown in
+the figures will no longer match the source.
 """
 import ast
 import pathlib
@@ -15,7 +21,7 @@ from _render_code import PROJECT, render
 def extract(rel_path, dotted, keep=None):
     """
     Return [(line_number, text), ...] for a function, or for selected ranges
-    within it. A (None, "") row marks a gap, so the figure keeps the file's
+    within a file. A (None, "") row marks a gap, so the figure keeps the file's
     real line numbers either side of an excerpt rather than renumbering.
     """
     path = PROJECT / rel_path
@@ -37,8 +43,8 @@ def extract(rel_path, dotted, keep=None):
     if node is None:
         raise SystemExit(f"not found: {dotted} in {rel_path}")
 
-    all_lines = text.splitlines()
     blocks = keep or [(node.lineno, node.end_lineno)]
+    all_lines = text.splitlines()
 
     rows = []
     for i, (a, b) in enumerate(blocks):
@@ -57,13 +63,48 @@ def dedent(rows):
 
 
 FIGURES = [
+    # ---------------- the scheduling engine, top down ----------------
     dict(
         no="Figure 4.6",
+        title="The two-phase scheduling algorithm",
+        rel="app/services/scheduler.py",
+        dotted="SchedulingEngine.generate",
+        file_label="app/services/scheduler.py  ·  SchedulingEngine.generate()",
+        out="fig_4_06_engine_overview.png",
+        caption=(
+            "The entry point that produces one department's roster for one week, and the clearest "
+            "statement of the hybrid design.\n"
+            "Demand is assembled first, then Phase 1 constructs a feasible roster and Phase 2 "
+            "improves it. The fairness cost is measured after each phase, which is what produces "
+            "the improvement figure reported to the manager and stored on the roster. Timing is "
+            "recorded around the whole operation: measured across the six departments, a complete "
+            "hospital roster is generated in approximately 1.5 seconds."
+        ),
+    ),
+    dict(
+        no="Figure 4.7",
+        title="Phase 1: constructing a feasible roster",
+        rel="app/services/scheduler.py",
+        dotted="SchedulingEngine._construct",
+        file_label="app/services/scheduler.py  ·  SchedulingEngine._construct()",
+        out="fig_4_07_phase1_construct.png",
+        caption=(
+            "Fills every required slot using only staff who satisfy all hard constraints.\n"
+            "The week is walked in calendar order with night shifts resolved first, because each "
+            "decision constrains the next: whether a nurse may take Tuesday morning depends on what "
+            "they worked on Monday. For each slot the best candidate is selected and placed. Where "
+            "no legal candidate exists the slot is recorded as a coverage gap and escalated, rather "
+            "than filled by breaking a rule. A roster is therefore feasible by construction and is "
+            "never repaired after the fact."
+        ),
+    ),
+    dict(
+        no="Figure 4.8",
         title="Hard-constraint verification: the rest-period rule",
         rel="app/services/constraints.py",
         dotted="HardConstraintChecker._rest_violation",
         file_label="app/services/constraints.py  ·  HardConstraintChecker._rest_violation()",
-        out="fig_4_6_rest_constraint.png",
+        out="fig_4_08_rest_constraint.png",
         caption=(
             "Enforces the minimum rest period between shifts, and with it the requirement that a "
             "night worker must not take the following morning or afternoon shift.\n"
@@ -76,12 +117,31 @@ FIGURES = [
         ),
     ),
     dict(
-        no="Figure 4.7",
+        no="Figure 4.9",
+        title="Quantifying fairness: the objective function",
+        rel="app/services/fairness.py",
+        dotted="FairnessObjective.cost",
+        file_label="app/services/fairness.py  ·  _variance(), FairnessObjective.cost(), candidate_rank()",
+        out="fig_4_09_fairness_objective.png",
+        keep=[(28, 33), (96, 120)],
+        caption=(
+            "Turns fairness from an intention into a number the optimiser can minimise.\n"
+            "The cost is a weighted sum of the population variance of night shifts, weekend shifts "
+            "and total hours across the department, so a cost of zero means every staff member "
+            "carries an identical share. Coverage gaps are weighted a thousand times higher than "
+            "any fairness term, which guarantees the engine never trades away cover to make a "
+            "roster look more even. The same objective orders candidates during construction, so "
+            "whoever currently carries the lightest share of that kind of duty is offered the shift "
+            "first."
+        ),
+    ),
+    dict(
+        no="Figure 4.10",
         title="Phase 2: heuristic optimisation of the feasible roster",
         rel="app/services/scheduler.py",
         dotted="SchedulingEngine._optimise",
         file_label="app/services/scheduler.py  ·  SchedulingEngine._optimise()",
-        out="fig_4_7_optimiser.png",
+        out="fig_4_10_phase2_optimise.png",
         caption=(
             "Improves a feasible roster by hill climbing over three neighbourhood moves.\n"
             "Each iteration selects a move at random: fill a recorded coverage gap, reassign one "
@@ -92,13 +152,14 @@ FIGURES = [
             "phase reduced the fairness cost by between 26 and 62 per cent."
         ),
     ),
+    # ---------------- the remaining Chapter 4.4 modules ----------------
     dict(
-        no="Figure 4.8",
+        no="Figure 4.11",
         title="Automatic re-optimisation after approved leave",
         rel="app/services/reoptimizer.py",
         dotted="release_and_refill",
         file_label="app/services/reoptimizer.py  ·  release_and_refill()  ·  core replacement loop",
-        out="fig_4_8_reoptimiser.png",
+        out="fig_4_11_reoptimiser.png",
         keep=[(97, 99), (101, 140)],
         caption=(
             "Fills each shift released by approved leave or a reported absence, without human "
@@ -113,12 +174,12 @@ FIGURES = [
         ),
     ),
     dict(
-        no="Figure 4.9",
+        no="Figure 4.12",
         title="Attendance reconciliation against the published roster",
         rel="app/services/attendance.py",
         dotted="reconcile",
         file_label="app/services/attendance.py  ·  reconcile()",
-        out="fig_4_9_attendance.png",
+        out="fig_4_12_attendance.png",
         caption=(
             "Converts raw sign-in and sign-out stamps into the figures used for payroll and "
             "management reporting.\n"
@@ -131,12 +192,12 @@ FIGURES = [
         ),
     ),
     dict(
-        no="Figure 4.10",
+        no="Figure 4.13",
         title="Deriving real-time staff availability",
         rel="app/services/availability.py",
         dotted="presence_snapshot",
         file_label="app/services/availability.py  ·  presence_snapshot()  ·  derivation loop",
-        out="fig_4_10_availability.png",
+        out="fig_4_13_availability.png",
         keep=[(104, 139)],
         caption=(
             "Determines each staff member's live status for the dashboard.\n"
@@ -149,12 +210,32 @@ FIGURES = [
         ),
     ),
     dict(
-        no="Figure 4.11",
+        no="Figure 4.14",
+        title="Multi-channel notification dispatch",
+        rel="app/services/notifications.py",
+        dotted="dispatch",
+        file_label="app/services/notifications.py  ·  dispatch()  ·  docstring and guard clause elided",
+        out="fig_4_14_notifications.png",
+        keep=[(152, 161), (168, 170), (189, 214)],
+        caption=(
+            "Sends one message to one recipient across in-app, email and SMS, recording every "
+            "attempt.\n"
+            "The body is truncated for SMS so a long roster announcement does not become several "
+            "charged messages. Each channel resolves its own adapter from configuration, so the "
+            "console adapters used for demonstration and the live SMTP or HTTP gateways are "
+            "interchangeable without any change to this function. Every dispatch is written to the "
+            "notification log with its own delivery status, which is what produces the delivery-rate "
+            "figures on the analytics dashboard and lets a partial failure stay visible rather than "
+            "being lost."
+        ),
+    ),
+    dict(
+        no="Figure 4.15",
         title="Audit trail integrity verification",
         rel="app/services/audit.py",
         dotted="verify_chain",
         file_label="app/services/audit.py  ·  verify_chain()",
-        out="fig_4_11_audit.png",
+        out="fig_4_15_audit.png",
         caption=(
             "Detects any alteration to the audit trail.\n"
             "Every entry stores the SHA-256 digest of its own content combined with the digest of "
@@ -169,8 +250,8 @@ FIGURES = [
 
 
 def main():
-    print(f"{'FIGURE':<12} {'FILE':<34} {'SIZE':>11} {'ROWS':>5}  SOURCE LINES")
-    print("-" * 82)
+    print(f"{'FIGURE':<13} {'FILE':<34} {'SIZE':>11} {'ROWS':>5}  SOURCE")
+    print("-" * 88)
     for spec in FIGURES:
         rows = dedent(extract(spec["rel"], spec["dotted"], keep=spec.get("keep")))
         _path, w, h = render(
@@ -178,8 +259,9 @@ def main():
             rows, spec["caption"], spec["out"],
         )
         nums = [n for n, _ in rows if n is not None]
-        print(f"{spec['no']:<12} {spec['out']:<34} {w}x{h:<5} {len(rows):>5}  "
+        print(f"{spec['no']:<13} {spec['out']:<34} {w}x{h:<5} {len(rows):>5}  "
               f"L{min(nums)}-{max(nums)}")
+    print(f"\n{len(FIGURES)} figures written to docs/figures/")
 
 
 if __name__ == "__main__":
