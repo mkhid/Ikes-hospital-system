@@ -4,12 +4,20 @@
 {% block subheading %}{{ scope }} &middot; live workforce availability{% endblock %}
 
 {% block topbar_actions %}
+<form class="search-pill d-none d-lg-flex" method="get" action="{{ url_for('profile.directory') }}" role="search">
+  <input type="search" name="q" placeholder="Search staff" aria-label="Search staff">
+  <button type="submit" aria-label="Search">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+    </svg>
+  </button>
+</form>
 <div class="d-flex align-items-center gap-2 flex-shrink-0">
-  <span class="badge-soft green"><span class="live-dot"></span> Live</span>
   <span class="badge-soft brand" id="current-shift">
     {{ snapshot.current_shift.short_name if snapshot.current_shift else 'Between shifts' }}
   </span>
-  <span class="text-secondary small text-nowrap d-none d-md-inline">
+  <span class="text-secondary small text-nowrap d-none d-xl-inline">
     as of <span id="as-of">{{ snapshot.moment|dt('%H:%M:%S') }}</span>
   </span>
 </div>
@@ -18,32 +26,156 @@
 {% block content %}
 
 <div class="row g-3 mb-3">
-  <div class="col-6 col-xl-3">
-    <div class="stat-tile is-green">
-      <div class="stat-tile__label">On duty and available</div>
-      <div class="stat-tile__value" data-live="on_duty">{{ snapshot.on_duty }}</div>
-      <div class="stat-tile__meta">Signed in and inside the facility</div>
+
+  {# Hero. Carries the one action a manager comes here to take. #}
+  <div class="col-xl-7">
+    <div class="hero-panel h-100">
+      <div class="hero-panel__text">
+        <span class="hero-panel__eyebrow">Overview</span>
+        <h2>Workforce Operations</h2>
+        <p>
+          {{ scope }} &middot; week of {{ week_label }}.
+          {{ report.scheduling.shifts_scheduled }} shifts scheduled across
+          {{ report.headcount }} staff, every one checked against the rest,
+          workload and night-duty rules before it was assigned.
+        </p>
+        {% if current_user.has_oversight or current_user.is_manager %}
+        <a class="btn btn-primary" href="{{ url_for('schedule.generate') }}">Generate roster</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ url_for('schedule.my_schedule') }}">View my schedule</a>
+        {% endif %}
+      </div>
+      <img class="hero-panel__art" src="{{ url_for('static', filename='img/doc-landing-page.jpg') }}"
+           alt="" aria-hidden="true">
     </div>
   </div>
-  <div class="col-6 col-xl-3">
-    <div class="stat-tile is-amber">
-      <div class="stat-tile__label">Temporarily out</div>
-      <div class="stat-tile__value" data-live="temporarily_out">{{ snapshot.temporarily_out }}</div>
-      <div class="stat-tile__meta">On duty, currently off-site</div>
+
+  {# Live counts, as labelled rows with a tinted chip rather than four tiles.
+     The data-live hooks are unchanged, so the 30-second poll still updates
+     these in place. #}
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center">
+        <span class="flex-grow-1">Current situation</span>
+        <span class="badge-soft green"><span class="live-dot"></span> Live</span>
+      </div>
+      <div class="card-body d-grid gap-3">
+
+        <div class="metric-row">
+          <span class="icon-chip green">
+            {{ icon('users') }}
+          </span>
+          <div class="metric-row__text">
+            <strong>On duty and available</strong>
+            <small>Signed in and inside the facility</small>
+          </div>
+          <span class="metric-row__value text-success" data-live="on_duty">{{ snapshot.on_duty }}</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="icon-chip amber">
+            {{ icon('clock') }}
+          </span>
+          <div class="metric-row__text">
+            <strong>Temporarily out</strong>
+            <small>On duty, currently off-site</small>
+          </div>
+          <span class="metric-row__value text-warning-emphasis" data-live="temporarily_out">{{ snapshot.temporarily_out }}</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="icon-chip">
+            {{ icon('shield') }}
+          </span>
+          <div class="metric-row__text">
+            <strong>Doctors on duty</strong>
+            <small><span data-live="nurses_on_duty">{{ snapshot.nurses_on_duty }}</span> nurses on duty</small>
+          </div>
+          <span class="metric-row__value" style="color: var(--brand)" data-live="doctors_on_duty">{{ snapshot.doctors_on_duty }}</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="icon-chip red">
+            {{ icon('alert') }}
+          </span>
+          <div class="metric-row__text">
+            <strong>Absent</strong>
+            <small>Rostered now, not signed in</small>
+          </div>
+          <span class="metric-row__value {{ 'text-danger' if snapshot.absent else '' }}" data-live="absent">{{ snapshot.absent }}</span>
+        </div>
+
+      </div>
     </div>
   </div>
-  <div class="col-6 col-xl-3">
-    <div class="stat-tile is-brand">
-      <div class="stat-tile__label">Doctors on duty</div>
-      <div class="stat-tile__value" data-live="doctors_on_duty">{{ snapshot.doctors_on_duty }}</div>
-      <div class="stat-tile__meta"><span data-live="nurses_on_duty">{{ snapshot.nurses_on_duty }}</span> nurses on duty</div>
+</div>
+
+<div class="row g-3 mb-3">
+
+  {# This week at a glance. Real measures rather than a graded rubric: an
+     examiner can trace each number back to analytics.workforce_report(). #}
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header">Weekly report</div>
+      <div class="card-body d-flex flex-column">
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <div class="panel-inset text-center h-100">
+              <div class="grade-tile__label">Coverage</div>
+              <div class="grade-tile__value text-success">{{ report.scheduling.fill_rate }}%</div>
+              <div class="grade-tile__meta">
+                {{ report.scheduling.coverage_gaps }} gap{{ '' if report.scheduling.coverage_gaps == 1 else 's' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="panel-inset text-center h-100">
+              <div class="grade-tile__label">Utilisation</div>
+              <div class="grade-tile__value" style="color: var(--brand)">{{ report.attendance.utilisation }}%</div>
+              <div class="grade-tile__meta">{{ report.attendance.worked_hours }}h worked</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="panel-inset text-center h-100">
+              <div class="grade-tile__label">Absence</div>
+              <div class="grade-tile__value {{ 'text-danger' if report.attendance.absenteeism_rate else '' }}">{{ report.attendance.absenteeism_rate }}%</div>
+              <div class="grade-tile__meta">{{ report.attendance.late }} late</div>
+            </div>
+          </div>
+        </div>
+        {% if current_user.has_oversight or current_user.is_manager %}
+        <a class="btn btn-primary w-100 mt-auto" href="{{ url_for('reports.analytics_dashboard') }}">Download full report</a>
+        {% endif %}
+      </div>
     </div>
   </div>
-  <div class="col-6 col-xl-3">
-    <div class="stat-tile {{ 'is-red' if snapshot.absent else '' }}">
-      <div class="stat-tile__label">Absent</div>
-      <div class="stat-tile__value" data-live="absent">{{ snapshot.absent }}</div>
-      <div class="stat-tile__meta">Rostered now, not signed in</div>
+
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header d-flex flex-wrap align-items-center gap-2">
+        <span class="flex-grow-1">Coverage this week</span>
+        <span class="text-secondary small">{{ week_label }}</span>
+      </div>
+      <div class="card-body">
+        {% if report.daily_coverage %}
+        {# Day labels are built here rather than mapped, so they read as
+           "Mon 07/09" instead of an ISO date. #}
+        {% set cov_labels = [] %}
+        {% for row in report.daily_coverage %}
+          {% set _ = cov_labels.append(row.date|d('%a %d/%m')) %}
+        {% endfor %}
+        <div class="chart-box h-md">
+          <canvas id="coverageChart" data-chart='{{ {
+            "kind": "coverage",
+            "labels": cov_labels,
+            "filled": report.daily_coverage | map(attribute="filled") | list,
+            "gaps": report.daily_coverage | map(attribute="gaps") | list
+          } | tojson }}'></canvas>
+        </div>
+        {% else %}
+        <p class="text-secondary small mb-0">No shifts scheduled this week yet.</p>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>
@@ -202,16 +334,8 @@
           </div>
         </div>
 
-        {% if report.daily_coverage %}
-        <div class="chart-box h-sm">
-          <canvas id="coverageChart" data-chart='{{ {
-            "kind": "coverage",
-            "labels": report.daily_coverage | map(attribute="date") | map("string") | list,
-            "filled": report.daily_coverage | map(attribute="filled") | list,
-            "gaps": report.daily_coverage | map(attribute="gaps") | list
-          } | tojson }}'></canvas>
-        </div>
-        {% endif %}
+        {# The coverage chart that stood here has moved up beside the weekly
+           report, where it sits alongside the figures it illustrates. #}
       </div>
     </div>
   </div>

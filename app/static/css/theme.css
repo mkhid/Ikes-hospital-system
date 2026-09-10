@@ -904,3 +904,171 @@ body {
 [data-bs-theme="dark"] .bg-light { background: var(--surface-2) !important; }
 [data-bs-theme="dark"] .text-dark { color: var(--ink) !important; }
 [data-bs-theme="dark"] .border { border-color: var(--line) !important; }
+
+/* ---------- Dashboard hero and metric rows ---------------------------
+   The composition pieces: a hero panel carrying the page's main action, a
+   labelled metric row with a tinted chip, and the inset figure tiles. */
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, var(--brand-darker), var(--brand));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  color: #fff;
+  min-height: 208px;
+}
+.hero-panel__text {
+  padding: 1.5rem 1.6rem;
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.hero-panel__eyebrow {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.hero-panel h2 {
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0.2rem 0 0.5rem;
+}
+.hero-panel p {
+  font-size: 0.83rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.86);
+}
+.hero-panel .btn-primary {
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #fff;
+  --bs-btn-color: var(--brand-darker);
+  --bs-btn-hover-bg: #eef4fc;
+  --bs-btn-hover-border-color: #eef4fc;
+  --bs-btn-hover-color: var(--brand-darker);
+  --bs-btn-active-bg: #dfe9f8;
+  --bs-btn-active-color: var(--brand-darker);
+  font-weight: 600;
+}
+/* The photograph is decoration, so it is faded into the panel from the left
+   rather than presented as content, and drops out entirely when there is not
+   enough width for it to be anything but clutter. */
+.hero-panel__art {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 46%;
+  object-fit: cover;
+  object-position: 62% 28%;
+  opacity: 0.85;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
+}
+@media (max-width: 991.98px) {
+  .hero-panel__art { display: none; }
+  .hero-panel__text { max-width: none; }
+}
+
+.metric-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.metric-row__text { min-width: 0; flex-grow: 1; }
+.metric-row__text strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.metric-row__text small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  line-height: 1.35;
+}
+.metric-row__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.icon-chip svg { width: 17px; height: 17px; }
+
+.grade-tile__label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 650;
+  color: var(--ink-muted);
+}
+.grade-tile__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin: 0.15rem 0;
+}
+.grade-tile__meta { font-size: 0.66rem; color: var(--ink-muted); }
+
+/* Pill search in the topbar. */
+.search-pill {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50rem;
+  padding: 0.15rem 0.15rem 0.15rem 0.9rem;
+  box-shadow: var(--shadow-card);
+  min-width: 210px;
+  max-width: 320px;
+  flex: 0 1 280px;
+}
+.search-pill input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 0.8rem;
+  color: var(--ink);
+  min-width: 0;
+  flex-grow: 1;
+  padding: 0.3rem 0;
+}
+.search-pill input::placeholder { color: var(--ink-faint); }
+.search-pill button {
+  border: 0;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The brand ramp is inverted for dark (darker = lighter, so it lifts off the
+   background), which is right everywhere except here: fed to the hero
+   gradient it produces a pale panel with a white button on it. The hero keeps
+   an explicitly dark gradient in both themes. */
+[data-bs-theme="dark"] .hero-panel {
+  background: linear-gradient(135deg, #0f2748, #1c4c85);
+}
+[data-bs-theme="dark"] .hero-panel .btn-primary {
+  --bs-btn-color: #0f2748;
+  --bs-btn-hover-color: #0f2748;
+  --bs-btn-active-color: #0f2748;
+}
+[data-bs-theme="dark"] .hero-panel__art { opacity: 0.6; }
