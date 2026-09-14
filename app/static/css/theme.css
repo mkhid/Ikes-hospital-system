@@ -1170,3 +1170,22 @@ body {
   background: linear-gradient(150deg, #14355e, #1c4c85);
 }
 [data-bs-theme="dark"] .side-card__btn { color: #14355e; }
+
+/* Table header rows. Every template marks its <thead> with Bootstrap's
+   .table-light, which hardcodes a near-white ground regardless of theme, so in
+   dark mode each table carried a bright white band of dark text. Rather than
+   edit 29 headers across 18 templates, the class is pointed at the theme
+   tokens here, which is correct in both themes. */
+.table-light {
+  --bs-table-color: var(--ink-muted);
+  --bs-table-bg: var(--surface-2);
+  --bs-table-border-color: var(--line);
+  --bs-table-striped-bg: var(--surface-2);
+  --bs-table-striped-color: var(--ink);
+  --bs-table-active-bg: var(--surface-3);
+  --bs-table-active-color: var(--ink);
+  --bs-table-hover-bg: var(--surface-3);
+  --bs-table-hover-color: var(--ink);
+  color: var(--bs-table-color);
+  border-color: var(--bs-table-border-color);
+}

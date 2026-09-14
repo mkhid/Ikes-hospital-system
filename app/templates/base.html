@@ -107,7 +107,11 @@
       <a class="nav-link {{ 'active' if ep == 'profile.directory' }}" href="{{ url_for('profile.directory') }}">
         {{ icon('users') }} Staff directory</a>
       {% if current_user.is_authenticated and current_user.has_oversight %}
-      <a class="nav-link {{ 'active' if ep.startswith('admin.') }}" href="{{ url_for('admin.index') }}">
+      {# Account management was reachable only through a small button inside the
+         Administration page, where HR could not find it. It gets its own entry. #}
+      <a class="nav-link {{ 'active' if ep in ('admin.staff_list', 'admin.create_staff', 'admin.edit_staff') }}" href="{{ url_for('admin.staff_list') }}">
+        {{ icon('users') }} Staff accounts</a>
+      <a class="nav-link {{ 'active' if ep in ('admin.index', 'admin.department_settings') }}" href="{{ url_for('admin.index') }}">
         {{ icon('settings') }} Administration</a>
       {% endif %}
     </nav>
