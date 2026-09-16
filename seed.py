@@ -77,12 +77,12 @@ DEPARTMENTS = [
         "code": "PHA",
         "name": "Pharmacy",
         "location": "Main Dispensary",
-        "description": "Dispensing and clinical pharmacy during extended hours.",
-        "operating_model": "EXTENDED_HOURS",
+        "description": "Dispensing and clinical pharmacy around the clock, including the emergency unit overnight.",
+        "operating_model": "ROUND_THE_CLOCK",
         "requirements": {
             ShiftCode.MORNING: (2, 1),
             ShiftCode.AFTERNOON: (1, 1),
-            ShiftCode.NIGHT: (0, 0),
+            ShiftCode.NIGHT: (1, 1),
         },
     },
     {
@@ -148,10 +148,10 @@ STAFF = {
     ],
     "PHA": [
         ("TH-PHA-001", "Gifty", "Ansah", Role.MANAGER, "Chief Pharmacist", "BPharm, MPSGH", "0554303001", True, False, None),
-        ("TH-PHA-002", "Emmanuel", "Tetteh", Role.STAFF, "Pharmacist", "BPharm", "0554303002", False, False, ShiftCode.MORNING),
-        ("TH-PHA-003", "Naa Adjeley", "Quaye", Role.STAFF, "Pharmacist", "PharmD", "0554303003", False, False, None),
-        ("TH-PHA-004", "Isaac", "Nkrumah", Role.STAFF, "Pharmacy Technician", "Dip. Pharmacy", "0554303004", False, False, ShiftCode.AFTERNOON),
-        ("TH-PHA-005", "Comfort", "Aidoo", Role.STAFF, "Pharmacy Technician", "Dip. Pharmacy", "0554303005", False, False, None),
+        ("TH-PHA-002", "Emmanuel", "Tetteh", Role.STAFF, "Pharmacist", "BPharm", "0554303002", False, True, ShiftCode.MORNING),
+        ("TH-PHA-003", "Naa Adjeley", "Quaye", Role.STAFF, "Pharmacist", "PharmD", "0554303003", False, True, None),
+        ("TH-PHA-004", "Isaac", "Nkrumah", Role.STAFF, "Pharmacy Technician", "Dip. Pharmacy", "0554303004", False, True, ShiftCode.AFTERNOON),
+        ("TH-PHA-005", "Comfort", "Aidoo", Role.STAFF, "Pharmacy Technician", "Dip. Pharmacy", "0554303005", False, True, None),
         ("TH-PHA-006", "Daniel", "Appiah", Role.STAFF, "Dispensing Assistant", "Cert. Dispensing", "0554303006", False, False, None),
     ],
     "LAB": [
