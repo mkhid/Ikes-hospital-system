@@ -60,7 +60,7 @@ class Config:
     # read from the environment so a hospital can tune policy without code
     # changes; the Admin > Policy screen writes to the same values at runtime.
     MIN_REST_HOURS = _as_int(os.getenv("MIN_REST_HOURS"), 11)
-    MAX_WEEKLY_HOURS = _as_int(os.getenv("MAX_WEEKLY_HOURS"), 48)
+    MAX_WEEKLY_HOURS = _as_int(os.getenv("MAX_WEEKLY_HOURS"), 40)
     MAX_CONSECUTIVE_DAYS = _as_int(os.getenv("MAX_CONSECUTIVE_DAYS"), 6)
     MAX_CONSECUTIVE_NIGHTS = _as_int(os.getenv("MAX_CONSECUTIVE_NIGHTS"), 3)
     MIN_DAYS_OFF_PER_WEEK = _as_int(os.getenv("MIN_DAYS_OFF_PER_WEEK"), 1)

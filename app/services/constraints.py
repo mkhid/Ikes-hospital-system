@@ -18,7 +18,7 @@ class SchedulingPolicy:
     """Hospital policy limits, loaded from configuration."""
 
     min_rest_hours: int = 11
-    max_weekly_hours: int = 48
+    max_weekly_hours: int = 40
     max_consecutive_days: int = 6
     max_consecutive_nights: int = 3
     min_days_off_per_week: int = 1
@@ -191,7 +191,7 @@ class HardConstraintChecker:
                 if nights > policy.max_consecutive_nights:
                     broken.append("MAX_CONSECUTIVE_NIGHTS")
 
-            cap = staff.max_weekly_hours or policy.max_weekly_hours
+            cap = min(policy.max_weekly_hours, staff.max_weekly_hours or policy.max_weekly_hours)
             if state.weekly_hours(staff.id, work_date) > cap:
                 broken.append("MAX_WEEKLY_HOURS")
 

@@ -150,7 +150,7 @@ Hard constraints, all configurable via `.env`:
 |---|---|
 | One shift per person per day | always |
 | Minimum rest between shifts | 11 hours |
-| Maximum weekly hours | 48 |
+| Maximum weekly hours | 40 |
 | Maximum consecutive working days | 6 |
 | Maximum consecutive night shifts | 3 |
 | Minimum days off per week | 1 |
@@ -275,7 +275,7 @@ Ordered by value.
 **The re-optimiser does not chain moves.** When leave frees a shift, it picks
 the fairest *legally eligible* colleague — but on any given day most of a
 six-person department is already assigned, so often only one person qualifies.
-In one seeded week a nurse reached 44h against a 48h cap. Legal and correct, but
+In one seeded week a nurse reached 44h against what was then a 48h cap (now 40h). Legal and correct, but
 a chained move (shuffling a third person to free a fairer candidate) would
 improve it. Good "future work" material for Chapter 5.5.
 

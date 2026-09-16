@@ -15,7 +15,7 @@ from app.models import Assignment, Department, LeaveRequest, Staff
 app = create_app()
 
 MIN_REST_HOURS = 11
-MAX_WEEKLY_HOURS = 48
+MAX_WEEKLY_HOURS = 40
 MAX_CONSEC_DAYS = 6
 MAX_CONSEC_NIGHTS = 3
 

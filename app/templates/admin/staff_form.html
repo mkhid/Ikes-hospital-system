@@ -122,10 +122,10 @@
         <div class="col-md-6">
           <label for="max_weekly_hours" class="form-label small fw-semibold">Personal weekly hour cap</label>
           <input type="number" class="form-control" id="max_weekly_hours" name="max_weekly_hours"
-                 min="0" max="80"
+                 min="0" max="{{ config.MAX_WEEKLY_HOURS }}"
                  value="{{ staff.max_weekly_hours if staff and staff.max_weekly_hours else '' }}"
                  placeholder="Hospital default ({{ config.MAX_WEEKLY_HOURS }})">
-          <div class="form-text">Leave blank to use the hospital-wide limit.</div>
+          <div class="form-text">Leave blank to use the hospital-wide limit of {{ config.MAX_WEEKLY_HOURS }} hours. A personal cap can only be lower.</div>
         </div>
       </div>
 

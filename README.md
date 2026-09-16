@@ -104,7 +104,7 @@ than repaired afterwards.
 |---|---|
 | One shift per person per day | always |
 | Minimum rest between shifts | 11 hours |
-| Maximum weekly hours | 48 |
+| Maximum weekly hours | 40 |
 | Maximum consecutive working days | 6 |
 | Maximum consecutive night shifts | 3 |
 | Minimum days off per week | 1 |
@@ -353,7 +353,7 @@ its footer.
 | `SYSTEM_ABBR` | IHWSS | Short form for tight spaces |
 | `HOSPITAL_NAME` | Taifa Hospital | The institution running this instance |
 | `MIN_REST_HOURS` | 11 | Rest between shifts; enforces the night-then-day rule |
-| `MAX_WEEKLY_HOURS` | 48 | Weekly cap per staff member |
+| `MAX_WEEKLY_HOURS` | 40 | Weekly cap per staff member |
 | `MAX_CONSECUTIVE_DAYS` | 6 | Longest run of working days |
 | `MAX_CONSECUTIVE_NIGHTS` | 3 | Longest run of night shifts |
 | `MIN_DAYS_OFF_PER_WEEK` | 1 | Guaranteed rest days |
