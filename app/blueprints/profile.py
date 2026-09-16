@@ -6,6 +6,7 @@ from app.constants import AssignmentStatus, AuditAction, LeaveStatus, RosterStat
 from app.extensions import db
 from app.models import Assignment, AttendanceRecord, Department, LeaveRequest, Roster, Staff
 from app.services import audit
+from app.utils.decorators import oversight_required
 from app.utils.timeutils import today, week_start
 
 profile_bp = Blueprint("profile", __name__)
@@ -24,13 +25,11 @@ def view(staff_id):
     if staff is None:
         abort(404)
 
-    same_department = staff.department_id == current_user.department_id
-    if not (
-        current_user.has_oversight
-        or current_user.is_manager
-        or same_department
-        or staff.id == current_user.id
-    ):
+    # A profile carries contact details, attendance and leave history. Only HR
+    # and Admin may open another person's; everyone may open their own.
+    # Managers are deliberately excluded: rosters and the attendance register
+    # already show them what they need to run a department.
+    if not (current_user.has_oversight or staff.id == current_user.id):
         abort(403)
 
     return _profile_for(staff, editable=(staff.id == current_user.id))
@@ -130,8 +129,9 @@ def update():
 
 @profile_bp.route("/directory")
 @login_required
+@oversight_required
 def directory():
-    """Everyone in the hospital, grouped by department."""
+    """Everyone in the hospital, grouped by department. HR and Admin only."""
     department_id = request.args.get("department_id", type=int)
     query = Staff.query.filter_by(is_active=True)
     if department_id:

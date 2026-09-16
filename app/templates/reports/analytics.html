@@ -229,8 +229,12 @@
         {% for row in report.per_staff %}
         <tr>
           <td>
+            {% if current_user.has_oversight %}
             <a href="{{ url_for('profile.view', staff_id=row.staff.id) }}" class="fw-semibold text-decoration-none">
               {{ row.staff.full_name }}</a>
+            {% else %}
+            <span class="fw-semibold">{{ row.staff.full_name }}</span>
+            {% endif %}
             <div class="text-secondary" style="font-size:.68rem">{{ row.staff.job_title or row.staff.role_label }}</div>
           </td>
           <td class="text-secondary">{{ row.staff.department.code }}</td>
