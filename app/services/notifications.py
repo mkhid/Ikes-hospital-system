@@ -129,10 +129,17 @@ EMAIL_ADAPTERS = {"console": ConsoleEmailAdapter, "smtp": SmtpEmailAdapter}
 SMS_ADAPTERS = {"console": ConsoleSmsAdapter, "http": HttpSmsAdapter}
 
 
-def _adapter_for(channel):
+def _adapter_for(channel, destination=None):
     config = current_app.config
     if channel == Channel.EMAIL:
-        return EMAIL_ADAPTERS.get(config.get("EMAIL_BACKEND", "console"), ConsoleEmailAdapter)()
+        adapter = EMAIL_ADAPTERS.get(config.get("EMAIL_BACKEND", "console"), ConsoleEmailAdapter)
+        # With an allowlist, only the named addresses get real mail. Everyone
+        # else is simulated, so a test against fabricated demo addresses cannot
+        # send to strangers or bounce off made-up domains.
+        allowed = config.get("EMAIL_ALLOWED_RECIPIENTS")
+        if allowed and (destination or "").lower() not in allowed:
+            return ConsoleEmailAdapter()
+        return adapter()
     if channel == Channel.SMS:
         return SMS_ADAPTERS.get(config.get("SMS_BACKEND", "console"), ConsoleSmsAdapter)()
     return InAppAdapter()
@@ -200,7 +207,7 @@ def dispatch(
             link=link,
             status=DeliveryStatus.QUEUED,
         )
-        status, error = _adapter_for(channel).send(notification)
+        status, error = _adapter_for(channel, destination).send(notification)
         notification.status = status
         notification.error = error
         if status in (DeliveryStatus.SENT, DeliveryStatus.SIMULATED):

@@ -38,10 +38,14 @@
         </div>
       </div>
       {% else %}
-      <dl class="row small mb-3">
+      <dl class="row small mb-2">
         <dt class="col-3 text-secondary fw-normal">Staff number</dt><dd class="col-9 font-mono">{{ staff.staff_no }}</dd>
-        <dt class="col-3 text-secondary fw-normal">Email</dt><dd class="col-9">{{ staff.email }}</dd>
       </dl>
+      <div class="mb-3">
+        <label for="email" class="form-label small fw-semibold">Work email</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ staff.email }}" required>
+        <div class="form-text">Also a sign-in identifier, and where email notifications are sent. Must be unique.</div>
+      </div>
       {% endif %}
 
       <div class="row g-3 mb-3">

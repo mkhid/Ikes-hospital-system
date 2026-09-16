@@ -119,6 +119,13 @@ def _warn_on_unsafe_production(app):
             'python -c "import secrets; print(secrets.token_hex(32))"'
         )
 
+    if app.config.get("EMAIL_BACKEND") == "smtp" and not app.config.get("EMAIL_ALLOWED_RECIPIENTS"):
+        app.logger.warning(
+            "EMAIL_BACKEND is smtp with no EMAIL_ALLOWED_RECIPIENTS: real email "
+            "will go to every staff address on file. The seeded addresses are "
+            "fabricated; set an allowlist before testing against demo data."
+        )
+
     if not app.config.get("SESSION_COOKIE_SECURE"):
         app.logger.warning(
             "SESSION_COOKIE_SECURE is off: session cookies will travel in "
@@ -260,6 +267,42 @@ def _register_cli(app):
         work_date = date_cls.fromisoformat(target) if target else None
         flagged = attendance_service.mark_absentees(work_date)
         click.echo(f"{len(flagged)} staff flagged absent.")
+
+    @app.cli.command("send-test-email")
+    @click.argument("staff_no")
+    def send_test_email_command(staff_no):
+        """Email one member of staff through the configured backend and report the outcome."""
+        from app.constants import Channel
+        from app.extensions import db
+        from app.models import Staff
+        from app.services import notifications
+
+        staff = Staff.query.filter_by(staff_no=staff_no.upper()).first()
+        if staff is None:
+            raise click.ClickException(f"No staff member with number {staff_no}.")
+
+        backend = app.config["EMAIL_BACKEND"]
+        allowed = app.config["EMAIL_ALLOWED_RECIPIENTS"]
+        click.echo(f"Backend: {backend}")
+        click.echo(f"Allowlist: {', '.join(sorted(allowed)) if allowed else '(none - all addresses)'}")
+        click.echo(f"Sending to {staff.full_name} <{staff.email}> ...")
+
+        (row,) = notifications.dispatch(
+            staff,
+            f"Test email from {app.config['SYSTEM_NAME']}",
+            (
+                f"Dear {staff.first_name},\n\n"
+                "This is a test message confirming that email notifications from the "
+                "portal reach your inbox. No action is needed.\n\n"
+                f"{app.config['HOSPITAL_NAME']}"
+            ),
+            category="GENERAL",
+            channels=(Channel.EMAIL,),
+            commit=True,
+        )
+        click.echo(f"Result: {row.status}" + (f" - {row.error}" if row.error else ""))
+        if row.status == "SIMULATED" and backend == "smtp":
+            click.echo("Not sent for real: this address is not on EMAIL_ALLOWED_RECIPIENTS.")
 
     @app.cli.command("verify-audit")
     def verify_audit_command():

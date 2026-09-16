@@ -141,12 +141,21 @@ def edit_staff(staff_id):
 
     if request.method == "POST":
         before = {
+            "email": staff.email,
             "role": staff.role,
             "department": staff.department.name if staff.department else None,
             "job_title": staff.job_title,
             "can_work_nights": staff.can_work_nights,
             "max_weekly_hours": staff.max_weekly_hours,
         }
+
+        email = (request.form.get("email") or staff.email).strip().lower()
+        if email != staff.email:
+            clash = Staff.query.filter(Staff.email == email, Staff.id != staff.id).first()
+            if clash:
+                flash(f"That email address is already used by {clash.full_name}.", "danger")
+                return redirect(url_for("admin.edit_staff", staff_id=staff.id))
+            staff.email = email
 
         staff.first_name = (request.form.get("first_name") or staff.first_name).strip()
         staff.last_name = (request.form.get("last_name") or staff.last_name).strip()
@@ -176,6 +185,7 @@ def edit_staff(staff_id):
             department_id=staff.department_id,
             old=before,
             new={
+                "email": staff.email,
                 "role": staff.role,
                 "department": staff.department.name if staff.department else None,
                 "job_title": staff.job_title,

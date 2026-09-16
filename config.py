@@ -103,6 +103,15 @@ class Config:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_SENDER = os.getenv("MAIL_SENDER", "no-reply@taifahospital.gh")
+    # Comma-separated. When set, real email goes only to these addresses and
+    # every other message is simulated, as with the console backend. Use it to
+    # test live delivery against the demo data, whose addresses are fabricated.
+    # Leave empty in production so every member of staff receives their mail.
+    EMAIL_ALLOWED_RECIPIENTS = {
+        address.strip().lower()
+        for address in os.getenv("EMAIL_ALLOWED_RECIPIENTS", "").split(",")
+        if address.strip()
+    }
 
     SMS_API_URL = os.getenv("SMS_API_URL")
     SMS_API_KEY = os.getenv("SMS_API_KEY")
