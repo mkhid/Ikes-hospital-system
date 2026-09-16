@@ -49,9 +49,22 @@ contiguous code when it is not.
 3. If you prefer Word's own caption numbering, crop off the caption strip at the
    foot of the image and use the text below instead.
 
-Figure 4.11 is the widest at 1472 px. If it looks small at 15 cm, give it 16 cm
-and reduce that page's side margins slightly. Figure 4.7 is the shortest at 17
-lines and will sit comfortably beside body text.
+Figure 4.11 is both the widest (1459 px) and the tallest (61 lines, 2670 px). At
+15 cm wide it runs close to a full page, so give it a page of its own. Figure 4.7
+is the shortest at 17 lines and will sit comfortably beside body text.
+
+## Regenerating
+
+Run `python docs/generate_figures.py` after changing any illustrated function,
+or the line numbers in the figures stop matching the source. Figures 4.9, 4.11,
+4.13 and 4.14 select lines by number, so check their `keep` ranges in the
+script too; the others find their function by name.
+
+On Windows the code is set in Consolas and the captions in Segoe UI. Elsewhere
+the script falls back to Cascadia Mono and Noto Sans
+(`apt-get install fonts-cascadia-code fonts-noto-core`). The two sets look
+alike but not identical, so regenerate all ten on the same machine. The current
+set was generated on Linux with Cascadia Mono and Noto Sans.
 
 ---
 

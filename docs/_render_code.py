@@ -46,23 +46,51 @@ BUILTINS = {
     "enumerate", "zip", "abs", "round", "type", "super", "property", "hasattr",
 }
 
-FONT_DIR = pathlib.Path(r"C:\Windows\Fonts")
 SIZE = 26
 LINE_H = 36
 PAD_X = 22
 
+# Consolas and Segoe UI on Windows. Elsewhere, the closest open equivalents:
+# Cascadia Mono, Microsoft's open-source coding font, for the code, and Noto
+# Sans for the headings and captions. On Debian or Ubuntu:
+#     sudo apt-get install fonts-cascadia-code fonts-noto-core
+# Cascadia ships as one variable-weight file with no italic, so weights are
+# picked by name, and comments, which already carry their own colour, use the
+# regular weight. Regenerate all ten figures on one machine so they match.
+WINDOWS_FONTS = pathlib.Path(r"C:\Windows\Fonts")
+CASCADIA = pathlib.Path("/usr/share/fonts/truetype/cascadia-code/CascadiaMono.ttf")
+NOTO = pathlib.Path("/usr/share/fonts/truetype/noto")
 
-def _font(name, size=SIZE):
-    return ImageFont.truetype(str(FONT_DIR / name), size)
+
+def _cascadia(weight, size):
+    font = ImageFont.truetype(str(CASCADIA), size)
+    font.set_variation_by_name(weight)
+    return font
 
 
-REG = _font("consola.ttf")
-BOLD = _font("consolab.ttf")
-ITAL = _font("consolai.ttf")
-UI_BOLD = ImageFont.truetype(str(FONT_DIR / "segoeuib.ttf"), 27)
-UI_REG = ImageFont.truetype(str(FONT_DIR / "segoeui.ttf"), 22)
-UI_SM = ImageFont.truetype(str(FONT_DIR / "segoeui.ttf"), 21)
-UI_SM_B = ImageFont.truetype(str(FONT_DIR / "segoeuib.ttf"), 21)
+def _load_fonts():
+    if (WINDOWS_FONTS / "consola.ttf").exists():
+        mono = lambda name, size=SIZE: ImageFont.truetype(str(WINDOWS_FONTS / name), size)
+        ui = lambda bold, size: ImageFont.truetype(
+            str(WINDOWS_FONTS / ("segoeuib.ttf" if bold else "segoeui.ttf")), size
+        )
+        return mono("consola.ttf"), mono("consolab.ttf"), mono("consolai.ttf"), ui
+    if CASCADIA.exists() and (NOTO / "NotoSans-Regular.ttf").exists():
+        ui = lambda bold, size: ImageFont.truetype(
+            str(NOTO / ("NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf")), size
+        )
+        return _cascadia("Regular", SIZE), _cascadia("Bold", SIZE), _cascadia("Regular", SIZE), ui
+    raise SystemExit(
+        "No usable fonts: needs Consolas and Segoe UI (Windows), or Cascadia Mono "
+        "and Noto Sans (apt-get install fonts-cascadia-code fonts-noto-core)."
+    )
+
+
+REG, BOLD, ITAL, _ui = _load_fonts()
+UI_BOLD = _ui(True, 27)
+UI_REG = _ui(False, 22)
+UI_SM = _ui(False, 21)
+UI_SM_B = _ui(True, 21)
 
 CHAR_W = REG.getlength("M")
 
