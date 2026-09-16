@@ -147,13 +147,16 @@ class AuditAction(StrEnum):
     POLICY_UPDATED = "POLICY_UPDATED"
 
 
-# Shift definitions seeded into the database. Times follow the project brief:
-# Morning 07:00-14:00, Afternoon 14:00-22:00, Night 22:00-07:00 (next day).
+# Shift definitions seeded into the database. Three equal 8-hour shifts, so a
+# standard five-shift week is exactly 40 hours whatever mix of shifts it holds:
+# Morning 06:00-14:00, Afternoon 14:00-22:00, Night 22:00-06:00 (next day).
+# The original brief specified 7/8/9-hour shifts; the client moved to 8/8/8
+# with a 40-hour, five-shift contracted week.
 SHIFT_DEFINITIONS = [
     {
         "code": ShiftCode.MORNING,
         "name": "Morning Shift",
-        "start_time": "07:00",
+        "start_time": "06:00",
         "end_time": "14:00",
         "crosses_midnight": False,
         "sort_order": 1,
@@ -170,7 +173,7 @@ SHIFT_DEFINITIONS = [
         "code": ShiftCode.NIGHT,
         "name": "Night Shift",
         "start_time": "22:00",
-        "end_time": "07:00",
+        "end_time": "06:00",
         "crosses_midnight": True,
         "sort_order": 3,
     },

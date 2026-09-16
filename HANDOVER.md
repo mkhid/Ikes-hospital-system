@@ -147,7 +147,7 @@ Every account uses the password `Password123`.
 | Nursing Manager | `TH-NUR-001` | Generates and publishes the Nursing roster |
 | Doctor (staff) | `TH-DOC-002` | Own profile, schedule, leave, attendance |
 
-All 28 staff numbers work: `TH-NUR-001`–`006`, `TH-DOC-001`–`006`,
+All 32 staff numbers work: `TH-NUR-001`–`010`, `TH-DOC-001`–`006`,
 `TH-PHA-001`–`006`, `TH-LAB-001`–`006`, `TH-HRM-001`–`002`, `TH-ADM-001`–`002`.
 
 ---

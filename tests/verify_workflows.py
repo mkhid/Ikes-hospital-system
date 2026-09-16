@@ -143,10 +143,41 @@ with app.app_context():
     check("Shifts were released", request_row.shifts_released == shifts_before,
           f"released {request_row.shifts_released} of {shifts_before}")
     check("Re-optimiser ran", request_row.reoptimised_at is not None)
-    check("Replacements assigned",
-          request_row.shifts_refilled + 0 >= 0,
-          f"{request_row.shifts_refilled} refilled, "
-          f"{request_row.shifts_released - request_row.shifts_refilled} gap(s)")
+    # Staff are rostered to contract, so a shift can lose this person and still be
+    # at its minimum. The invariant is that every released shift ends up either
+    # at minimum staffing or with a recorded coverage gap; nothing silently short.
+    live = ["SCHEDULED", "REPLACEMENT"]
+    still_covered = refilled = gaps = unaccounted = 0
+    for released in Assignment.query.filter(
+        Assignment.staff_id == victim_id,
+        Assignment.status == "VACATED",
+        Assignment.work_date >= week,
+        Assignment.work_date <= week + timedelta(days=6),
+    ).all():
+        needed = released.roster.department.requirement_for(released.shift, released.work_date)
+        slot = Assignment.query.filter(
+            Assignment.roster_id == released.roster_id,
+            Assignment.work_date == released.work_date,
+            Assignment.shift_id == released.shift_id,
+        )
+        holders = slot.filter(Assignment.status.in_(live)).count()
+        covered_for_victim = slot.filter(
+            Assignment.status == "REPLACEMENT", Assignment.original_staff_id == victim_id
+        ).count()
+        gap_recorded = slot.filter(
+            Assignment.status == "UNFILLED", Assignment.original_staff_id == victim_id
+        ).count()
+        if covered_for_victim:
+            refilled += 1
+        elif gap_recorded:
+            gaps += 1
+        elif holders >= needed:
+            still_covered += 1
+        else:
+            unaccounted += 1
+    check("Every released shift covered or escalated", unaccounted == 0,
+          f"{still_covered} still at minimum, {refilled} refilled, {gaps} gap(s), "
+          f"{unaccounted} silently short")
 
     still_rostered = Assignment.query.filter(
         Assignment.staff_id == victim_id,
@@ -257,17 +288,25 @@ print("\n5. MANUAL OVERRIDE RESPECTS HARD CONSTRAINTS")
 with app.app_context():
     from app.services import roster_service
 
-    target_assignment = Assignment.query.filter(
+    # With everyone rostered to contract, many shifts have no legal replacement:
+    # in a two-person department the colleague is usually already working that
+    # day. Test on a shift that has both an eligible and a blocked candidate, so
+    # neither half of the check is skipped.
+    target_assignment, eligible, blocked = None, [], []
+    for candidate in Assignment.query.filter(
         Assignment.status == "SCHEDULED",
         Assignment.staff_id.isnot(None),
         Assignment.work_date >= today(),
-    ).first()
+    ).order_by(Assignment.work_date).limit(200).all():
+        eligible = roster_service.eligible_replacements(candidate)
+        blocked = roster_service.blocked_candidates(candidate)
+        if eligible and blocked:
+            target_assignment = candidate
+            break
+    check("Found a shift with eligible and blocked candidates", target_assignment is not None)
     aid = target_assignment.id
     dept = target_assignment.roster.department
     mgr_no = dept.manager.staff_no
-
-    eligible = roster_service.eligible_replacements(target_assignment)
-    blocked = roster_service.blocked_candidates(target_assignment)
     check("Eligible list computed", isinstance(eligible, list),
           f"{len(eligible)} eligible, {len(blocked)} blocked")
     good_id = eligible[0].id if eligible else None

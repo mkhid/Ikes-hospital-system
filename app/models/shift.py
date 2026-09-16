@@ -8,8 +8,8 @@ class Shift(db.Model):
     """
     One of the three daily shift windows.
 
-    Seeded to the project brief: Morning 07:00-14:00, Afternoon 14:00-22:00 and
-    Night 22:00-07:00. The night shift crosses midnight, so its end time falls
+    Three equal 8-hour shifts: Morning 06:00-14:00, Afternoon 14:00-22:00 and
+    Night 22:00-06:00. The night shift crosses midnight, so its end time falls
     on the following calendar day.
     """
 

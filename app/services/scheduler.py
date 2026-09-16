@@ -10,6 +10,11 @@ A hybrid, two-phase design:
   lopsided one. A slot with no legal candidate becomes a recorded coverage gap
   instead of an illegal assignment.
 
+  Phase 1 then brings every member of staff up to their contracted week, five
+  8-hour shifts less one per day of approved leave. Minimum staffing is met
+  first; the remaining contracted shifts are spread over the shifts the
+  department runs, day shifts before nights and weekdays before weekends.
+
   Phase 2 - Heuristic optimisation. Hill-climb over the feasible roster with
   three neighbourhood moves (fill a gap, reassign a slot, swap two slots),
   keeping any move that lowers the fairness cost and never accepting one that
@@ -54,8 +59,13 @@ class GenerationResult:
     """What the generator produced, for the flash message and the audit trail."""
 
     roster: Roster = None
+    # Minimum staffing: slots required, and how many of those were covered.
     slots_required: int = 0
     slots_filled: int = 0
+    # Shifts rostered above the minimum to bring staff up to their contract.
+    extra_shifts: int = 0
+    # Staff the engine could not legally bring up to contract: [{staff, short_hours}].
+    under_contract: list = field(default_factory=list)
     gaps: list = field(default_factory=list)
     cost_after_construction: float = 0.0
     cost_after_optimisation: float = 0.0
@@ -77,11 +87,18 @@ class GenerationResult:
     @property
     def summary(self):
         text = (
-            f"{self.slots_filled} of {self.slots_required} shifts filled "
+            f"{self.slots_filled} of {self.slots_required} required shifts covered, "
+            f"{self.extra_shifts} more to meet contracted hours, "
             f"in {self.seconds:.2f}s"
         )
         if self.gap_count:
             text += f", {self.gap_count} coverage gap(s)"
+        if self.under_contract:
+            names = ", ".join(
+                f"{row['staff'].full_name} ({row['short_hours']:.0f}h short)"
+                for row in self.under_contract
+            )
+            text += f". Below contracted hours: {names}"
         return text
 
 
@@ -116,6 +133,8 @@ class SchedulingEngine:
         self.checker = None
         # (work_date, shift) -> list of staff_id currently holding the slot
         self.placements = {}
+        # (work_date, shift_id) -> minimum staff, for every shift run that day
+        self.required = {}
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -136,16 +155,30 @@ class SchedulingEngine:
         result.slots_required = sum(count for _, _, count in demand)
 
         self._construct(demand, result)
+        self._fill_to_contract()
         result.cost_after_construction = self.objective.cost(
             self.tally, len(result.gaps)
         )
 
         self._optimise(result)
+        # Optimisation can move a shift off someone; top them back up.
+        self._fill_to_contract()
         result.cost_after_optimisation = self.objective.cost(
             self.tally, len(result.gaps)
         )
 
-        result.slots_filled = sum(len(v) for v in self.placements.values())
+        result.slots_filled = sum(
+            min(len(self.placements.get(key, [])), needed)
+            for key, needed in self.required.items()
+        )
+        result.extra_shifts = (
+            sum(len(v) for v in self.placements.values()) - result.slots_filled
+        )
+        result.under_contract = [
+            {"staff": s, "short_hours": self._shortfall(s)}
+            for s in self.staff
+            if self._shortfall(s) > 0
+        ]
         result.seconds = time.perf_counter() - started
         result.iterations = self.iterations
 
@@ -272,6 +305,7 @@ class SchedulingEngine:
                 required = self.department.requirement_for(shift, work_date)
                 if required > 0:
                     demand.append((work_date, shift, required))
+                    self.required[(work_date, shift.id)] = required
         return demand
 
     # ------------------------------------------------------------------
@@ -297,10 +331,16 @@ class SchedulingEngine:
 
     def _best_candidate(self, shift, work_date, exclude=()):
         """The feasible staff member with the lightest relevant workload."""
+        # Anyone without a shift's worth of contracted hours left would be
+        # refused by the checker anyway; skipping them first saves the full
+        # check, which is most of the search once everyone is at contract.
+        hours = shift.duration_hours
         candidates = [
             s
             for s in self.staff
-            if s.id not in exclude and self.checker.is_feasible(s, shift, work_date)
+            if s.id not in exclude
+            and self._shortfall(s) >= hours
+            and self.checker.is_feasible(s, shift, work_date)
         ]
         if not candidates:
             return None
@@ -323,6 +363,57 @@ class SchedulingEngine:
         holders = self.placements.get((work_date, shift.id), [])
         if staff.id in holders:
             holders.remove(staff.id)
+
+    # ------------------------------------------------------------------
+    # Phase 1, continued: the contracted week
+    # ------------------------------------------------------------------
+    def _shortfall(self, staff):
+        """Hours this person is still short of their contract this week."""
+        contract = self.state.contract_hours(staff, self.week_start)
+        return max(0.0, contract - self.state.weekly_hours(staff.id, self.week_start))
+
+    def _fill_to_contract(self):
+        """
+        Bring every member of staff up to their contracted hours.
+
+        Runs after minimum staffing is met, so contracted shifts only ever sit on
+        top of required cover and never compete with it. Staff take turns, one
+        shift each per round, the furthest short first, so no one fills up while
+        a colleague waits. Each extra shift goes where it is least of a burden:
+        day shifts before nights, weekdays before weekends, then the shift with
+        the most room above its minimum. The same hard-constraint checker
+        decides eligibility, and the checker will not let anyone past their
+        contract, so a person who cannot legally reach it is simply left short.
+        """
+        shift_by_id = {s.id: s for s in self.shifts}
+        while True:
+            pending = [s for s in self.staff if self._shortfall(s) > 0]
+            self.random.shuffle(pending)
+            pending.sort(key=lambda s: -self._shortfall(s))
+
+            placed = False
+            for staff in pending:
+                options = [
+                    (work_date, shift_id)
+                    for work_date, shift_id in self.required
+                    if self.checker.is_feasible(staff, shift_by_id[shift_id], work_date)
+                ]
+                if not options:
+                    continue
+                self.random.shuffle(options)
+                options.sort(
+                    key=lambda key: (
+                        shift_by_id[key[1]].crosses_midnight,
+                        is_weekend(key[0]),
+                        len(self.placements.get(key, [])) / self.required[key],
+                    )
+                )
+                work_date, shift_id = options[0]
+                self._place(staff, shift_by_id[shift_id], work_date)
+                placed = True
+
+            if not placed:
+                return
 
     # ------------------------------------------------------------------
     # Phase 2: heuristic optimisation
@@ -351,7 +442,10 @@ class SchedulingEngine:
                     current = self.objective.cost(self.tally, len(result.gaps))
                 continue
 
-            if move < 0.65:
+            # Reassigning needs someone with contracted hours to spare. Once the
+            # whole department is at contract no reassignment can succeed, so
+            # the iteration is spent on a swap, which keeps everyone's hours.
+            if move < 0.65 and any(self._shortfall(s) > 0 for s in self.staff):
                 delta = self._try_reassign(shift_by_id, current, len(result.gaps))
             else:
                 delta = self._try_swap(shift_by_id, current, len(result.gaps))
@@ -361,19 +455,41 @@ class SchedulingEngine:
                 result.improving_moves += 1
 
     def _try_fill_gap(self, result, shift_by_id):
-        """Attempt to close a recorded coverage gap with any feasible staff member."""
+        """
+        Attempt to close a recorded coverage gap.
+
+        With everyone rostered to contract, the colleague who could cover is
+        usually already at their hours. So when no one is free, a contracted
+        shift sitting above some other slot's minimum is given up to make room:
+        required cover always outranks contract top-up.
+        """
         index = self.random.randrange(len(result.gaps))
         gap = result.gaps[index]
         shift = gap["shift"]
         work_date = gap["work_date"]
 
         chosen = self._best_candidate(shift, work_date)
-        if chosen is None:
-            return False
+        if chosen is not None:
+            self._place(chosen, shift, work_date)
+            result.gaps.pop(index)
+            return True
 
-        self._place(chosen, shift, work_date)
-        result.gaps.pop(index)
-        return True
+        for (surplus_date, surplus_shift_id), holders in list(self.placements.items()):
+            needed = self.required.get((surplus_date, surplus_shift_id), 0)
+            if len(holders) <= needed:
+                continue
+            surplus_shift = shift_by_id[surplus_shift_id]
+            for staff_id in list(holders):
+                staff = self.staff_by_id.get(staff_id)
+                if staff is None:
+                    continue
+                self._lift(staff, surplus_shift, surplus_date)
+                if self.checker.is_feasible(staff, shift, work_date):
+                    self._place(staff, shift, work_date)
+                    result.gaps.pop(index)
+                    return True
+                self._place(staff, surplus_shift, surplus_date)
+        return False
 
     def _random_placement(self):
         keys = [k for k, v in self.placements.items() if v]

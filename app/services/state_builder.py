@@ -25,13 +25,16 @@ from app.utils.timeutils import date_range, is_weekend
 CONTEXT_DAYS = 8
 
 
-def build_state(department, start, end, ignore_assignment_ids=(), context_days=CONTEXT_DAYS):
+def build_state(department, start, end, ignore_assignment_ids=(), context_days=CONTEXT_DAYS,
+                allow_overtime=False):
     """
     Snapshot the department's current roster over a window.
 
     Returns (state, checker, tally, staff_by_id). Assignments listed in
     ignore_assignment_ids are left out, which is how a caller asks "what would
-    be legal if this shift were free?".
+    be legal if this shift were free?". allow_overtime builds a checker for
+    covering a colleague, which may take someone past their contracted hours
+    up to the cover limit.
     """
     policy = SchedulingPolicy.from_config(current_app.config)
     state = ScheduleState(policy=policy)
@@ -39,7 +42,7 @@ def build_state(department, start, end, ignore_assignment_ids=(), context_days=C
     staff = [s for s in department.members if s.is_active]
     staff_by_id = {s.id: s for s in staff}
     if not staff_by_id:
-        return state, HardConstraintChecker(state, department), WorkloadTally(), {}
+        return state, HardConstraintChecker(state, department, allow_overtime), WorkloadTally(), {}
 
     window_start = start - timedelta(days=context_days)
     window_end = end + timedelta(days=context_days)
@@ -65,7 +68,7 @@ def build_state(department, start, end, ignore_assignment_ids=(), context_days=C
 
     state.leave_dates = _leave_lookup(list(staff_by_id), window_start, window_end)
 
-    return state, HardConstraintChecker(state, department), tally, staff_by_id
+    return state, HardConstraintChecker(state, department, allow_overtime), tally, staff_by_id
 
 
 def _leave_lookup(staff_ids, start, end):

@@ -188,7 +188,7 @@ Built and run on Docker 29.7.2. Every step below was executed, not assumed.
 | `docker compose build` | Succeeded first attempt |
 | Image size | 299 MB |
 | Container health | `healthy` via `/healthz`, which probes the database |
-| First-start seeding | 28 staff, 24 rosters, 411 assignments, 0 coverage gaps |
+| First-start seeding | 32 staff, 24 rosters, 637 assignments, 0 coverage gaps |
 | Login over `http://<LAN-IP>:8000` | 302, dashboard reached |
 | Analytics, roster, outbox, register | all HTTP 200 |
 | Audit report PDF | 10,139 bytes, valid `%PDF` header |
@@ -283,7 +283,7 @@ With TLS working, set `SESSION_COOKIE_SECURE=true`.
 
 ## Before exposing it to the internet
 
-The seeded portal contains **28 accounts that all share the password
+The seeded portal contains **32 accounts that all share the password
 `Password123`**, including a system administrator. On a public URL, anyone who
 finds it can sign in with full access.
 

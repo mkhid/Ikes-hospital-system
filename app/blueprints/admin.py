@@ -27,6 +27,8 @@ def index():
         policy={
             "min_rest_hours": current_app.config["MIN_REST_HOURS"],
             "max_weekly_hours": current_app.config["MAX_WEEKLY_HOURS"],
+            "contract_shifts": current_app.config["CONTRACT_SHIFTS_PER_WEEK"],
+            "max_cover_weekly_hours": current_app.config["MAX_COVER_WEEKLY_HOURS"],
             "max_consecutive_days": current_app.config["MAX_CONSECUTIVE_DAYS"],
             "max_consecutive_nights": current_app.config["MAX_CONSECUTIVE_NIGHTS"],
             "min_days_off_per_week": current_app.config["MIN_DAYS_OFF_PER_WEEK"],

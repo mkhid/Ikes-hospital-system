@@ -14,6 +14,12 @@ period nor quietly dump every emergency shift on the same willing colleague.
 
 Where no legal replacement exists the slot is recorded as a coverage gap and
 escalated to the manager rather than being filled illegally or silently dropped.
+
+Staff are rostered to their contracted week, so most shifts carry more people
+than their minimum. A released shift is only refilled if losing that person took
+it below minimum staffing; otherwise it stands as it is. Cover may take a
+colleague into overtime, up to the cover limit, but a colleague who can take the
+shift within their contracted hours is always preferred.
 """
 from dataclasses import dataclass, field
 
@@ -33,6 +39,12 @@ class ReoptimisationResult:
     released: list = field(default_factory=list)
     refilled: list = field(default_factory=list)
     gaps: list = field(default_factory=list)
+    # Released shifts still at or above minimum staffing, so left as they are.
+    still_covered: list = field(default_factory=list)
+    # Replacements that took the colleague past their contracted hours.
+    overtime: list = field(default_factory=list)
+    # Colleagues moved off a shift above minimum staffing to take the cover.
+    moved: list = field(default_factory=list)
 
     @property
     def released_count(self):
@@ -54,6 +66,12 @@ class ReoptimisationResult:
             f"{self.released_count} shift(s) released, "
             f"{self.refilled_count} automatically reassigned"
         )
+        if self.still_covered:
+            text += f", {len(self.still_covered)} still at minimum staffing without cover"
+        if self.overtime:
+            text += f" ({len(self.overtime)} as overtime)"
+        if self.moved:
+            text += f", {len(self.moved)} by moving a colleague off a shift above minimum"
         if self.gaps:
             text += f", {self.gap_count} could not be covered"
         return text
@@ -95,7 +113,9 @@ def release_and_refill(staff, start_date, end_date, reason, actor=None, notify=T
     db.session.flush()
 
     objective = FairnessObjective(current_app.config.get("FAIRNESS_WEIGHTS"))
-    state, checker, tally, staff_by_id = build_state(department, start_date, end_date)
+    state, checker, tally, staff_by_id = build_state(
+        department, start_date, end_date, allow_overtime=True
+    )
     staff_pool = [s for s in staff_by_id.values() if s.id != staff.id]
 
     for vacated in result.released:
@@ -111,6 +131,11 @@ def release_and_refill(staff, start_date, end_date, reason, actor=None, notify=T
             if a.staff_id and a.status in (AssignmentStatus.SCHEDULED, AssignmentStatus.REPLACEMENT)
         }
 
+        # Still at minimum staffing without this person: nothing to cover.
+        if len(current_holders) >= department.requirement_for(shift, work_date):
+            result.still_covered.append(vacated)
+            continue
+
         candidates = rank_candidates(
             checker,
             tally,
@@ -120,9 +145,28 @@ def release_and_refill(staff, start_date, end_date, reason, actor=None, notify=T
             objective,
             exclude=current_holders | {staff.id},
         )
+        # Within contracted hours first; overtime only when no one else can.
+        candidates.sort(key=lambda s: _needs_overtime(state, s, shift, work_date))
 
-        if candidates:
-            chosen = candidates[0]
+        chosen = candidates[0] if candidates else None
+        moved_from = None
+        if chosen is None:
+            chosen, moved_from = _free_a_colleague(
+                state, checker, tally, objective, department, staff_pool, shift, work_date,
+                exclude=current_holders | {staff.id},
+            )
+
+        if chosen:
+            if moved_from is not None:
+                moved_from.status = AssignmentStatus.VACATED
+                moved_from.change_reason = (
+                    f"Moved to cover the {shift.short_name.lower()} shift on "
+                    f"{format_d(work_date)} for {staff.full_name}"
+                )
+                moved_from.updated_at = now()
+                result.moved.append(moved_from)
+            elif _needs_overtime(state, chosen, shift, work_date):
+                result.overtime.append(chosen)
             replacement = Assignment(
                 roster_id=vacated.roster_id,
                 staff_id=chosen.id,
@@ -154,6 +198,8 @@ def release_and_refill(staff, start_date, end_date, reason, actor=None, notify=T
 
             if notify and vacated.roster and vacated.roster.status == RosterStatus.PUBLISHED:
                 notifications.notify_replacement(replacement, chosen, reason)
+                if moved_from is not None:
+                    _notify_moved(chosen, moved_from)
         else:
             gap = Assignment(
                 roster_id=vacated.roster_id,
@@ -254,7 +300,7 @@ def fill_gap(assignment, actor=None, notify=True):
     department = assignment.roster.department
     objective = FairnessObjective(current_app.config.get("FAIRNESS_WEIGHTS"))
     state, checker, tally, staff_by_id = build_state(
-        department, assignment.work_date, assignment.work_date
+        department, assignment.work_date, assignment.work_date, allow_overtime=True
     )
 
     current_holders = {
@@ -302,6 +348,85 @@ def fill_gap(assignment, actor=None, notify=True):
 
     db.session.commit()
     return chosen
+
+
+def _free_a_colleague(state, checker, tally, objective, department, staff_pool, shift, work_date,
+                      exclude=()):
+    """
+    Chained cover, for when no colleague can take the shift as things stand.
+
+    With everyone rostered to contract, the usual obstacle is a colleague's own
+    shift: another shift the same day, or one the day before or after that the
+    rest period rules out. If that
+    shift has more people on it than its minimum, the colleague can be moved off
+    it: the shift they leave stays covered, their hours do not change, and the
+    gap is filled. Returns (colleague, assignment_to_vacate) or (None, None).
+    The caller writes the change; state and tally are updated here.
+    """
+    from datetime import timedelta
+
+    live = [AssignmentStatus.SCHEDULED, AssignmentStatus.REPLACEMENT]
+    # The same day first: a colleague already on another shift that day is the
+    # commonest obstacle, and moving them within the day disturbs least.
+    nearby = [work_date + timedelta(days=offset) for offset in (0, -1, 1, -2, 2)]
+    pool = sorted(
+        (s for s in staff_pool if s.id not in exclude),
+        key=lambda s: objective.candidate_rank(s, shift, work_date, tally),
+    )
+
+    for colleague in pool:
+        own = Assignment.query.filter(
+            Assignment.staff_id == colleague.id,
+            Assignment.work_date.in_(nearby),
+            Assignment.status.in_(live),
+        ).all()
+        for assignment in own:
+            on_that_shift = Assignment.query.filter(
+                Assignment.roster_id == assignment.roster_id,
+                Assignment.work_date == assignment.work_date,
+                Assignment.shift_id == assignment.shift_id,
+                Assignment.status.in_(live),
+            ).count()
+            if on_that_shift <= department.requirement_for(assignment.shift, assignment.work_date):
+                continue
+
+            state.release(colleague.id, assignment.work_date)
+            if checker.is_feasible(colleague, shift, work_date):
+                tally.remove(colleague, assignment.shift, assignment.work_date)
+                return colleague, assignment
+            state.assign(colleague.id, assignment.work_date, assignment.shift)
+
+    return None, None
+
+
+def _notify_moved(colleague, assignment):
+    """Tell a colleague the shift they were moved off is no longer theirs."""
+    notifications.dispatch(
+        colleague,
+        f"Shift changed: {format_d(assignment.work_date, '%a %d/%m')}",
+        (
+            f"Dear {colleague.first_name},\n\n"
+            f"You no longer work the {assignment.shift.short_name.lower()} shift "
+            f"({assignment.shift.window_label}) on "
+            f"{format_d(assignment.work_date, '%A %d/%m/%Y')}. That shift remains "
+            f"at its minimum staffing without you.\n\n"
+            f"Reason: {assignment.change_reason}"
+        ),
+        category="SHIFT_CHANGE",
+        link=None,
+    )
+
+
+def _needs_overtime(state, staff, shift, work_date):
+    """
+    Whether taking this shift would put the person past the 40-hour week.
+
+    Measured against the full contracted week, not the leave-reduced one, so it
+    agrees with the overtime shown on reports: someone whose leave fell on their
+    rest days still works an ordinary 40-hour week.
+    """
+    after = state.weekly_hours(staff.id, work_date) + shift.duration_hours
+    return after > state.policy.max_weekly_hours
 
 
 def _escalation_targets(department):

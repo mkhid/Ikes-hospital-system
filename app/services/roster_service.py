@@ -110,6 +110,7 @@ def eligible_replacements(assignment, limit=None):
         assignment.work_date,
         assignment.work_date,
         ignore_assignment_ids=[assignment.id],
+        allow_overtime=True,  # an override writes a REPLACEMENT: it is cover
     )
 
     holders = {
@@ -144,6 +145,7 @@ def blocked_candidates(assignment):
         assignment.work_date,
         assignment.work_date,
         ignore_assignment_ids=[assignment.id],
+        allow_overtime=True,  # an override writes a REPLACEMENT: it is cover
     )
 
     blocked = []
@@ -170,6 +172,7 @@ def override_assignment(assignment, new_staff, actor, reason=None, notify=True):
         assignment.work_date,
         assignment.work_date,
         ignore_assignment_ids=[assignment.id],
+        allow_overtime=True,  # an override writes a REPLACEMENT: it is cover
     )
 
     problems = checker.explain(new_staff, assignment.shift, assignment.work_date)

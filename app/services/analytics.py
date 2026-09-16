@@ -8,6 +8,9 @@ computed from primary records rather than maintained as a running counter, so a
 correction to an attendance record immediately corrects the reports.
 """
 from collections import defaultdict
+from datetime import timedelta
+
+from flask import current_app
 
 from app.constants import (
     AssignmentStatus,
@@ -95,6 +98,29 @@ def _leave(start_date, end_date, staff_ids):
 # ----------------------------------------------------------------------
 # Indicator groups
 # ----------------------------------------------------------------------
+def _cover_overtime(assignments):
+    """
+    Rostered hours beyond the contracted week, per staff member.
+
+    The generator never rosters anyone past their contract, so any week above
+    it was reached by covering a colleague's leave or absence. Returns
+    ({staff_id: hours}, {staff_id: weeks_in_overtime}).
+    """
+    contract = current_app.config.get("MAX_WEEKLY_HOURS", 40)
+    weekly = defaultdict(float)
+    for assignment in assignments:
+        if assignment.is_live and assignment.staff_id:
+            monday = assignment.work_date - timedelta(days=assignment.work_date.weekday())
+            weekly[(assignment.staff_id, monday)] += assignment.shift.duration_hours
+
+    hours, weeks = defaultdict(float), defaultdict(int)
+    for (staff_id, _monday), total in weekly.items():
+        if total > contract:
+            hours[staff_id] += total - contract
+            weeks[staff_id] += 1
+    return hours, weeks
+
+
 def _scheduling_kpis(assignments):
     live = [a for a in assignments if a.is_live]
     gaps = [a for a in assignments if a.status == AssignmentStatus.UNFILLED]
@@ -103,6 +129,7 @@ def _scheduling_kpis(assignments):
 
     scheduled_hours = sum(a.shift.duration_hours for a in live)
     required = len(live) + len(gaps)
+    overtime_hours, overtime_weeks = _cover_overtime(assignments)
 
     return {
         "shifts_scheduled": len(live),
@@ -113,6 +140,8 @@ def _scheduling_kpis(assignments):
         "fill_rate": _pct(len(live), required),
         "night_shifts": len([a for a in live if a.is_night]),
         "weekend_shifts": len([a for a in live if a.falls_on_weekend]),
+        "cover_overtime_hours": round(sum(overtime_hours.values()), 1),
+        "cover_overtime_staff": len(overtime_hours),
     }
 
 
@@ -230,9 +259,17 @@ def _per_staff(staff_list, assignments, attendance, leave):
             "absences": 0,
             "leave_days": 0,
             "replacements_taken": 0,
+            "cover_overtime_hours": 0.0,
+            "cover_overtime_weeks": 0,
         }
         for s in staff_list
     }
+
+    overtime_hours, overtime_weeks = _cover_overtime(assignments)
+    for staff_id, hours in overtime_hours.items():
+        if staff_id in rows:
+            rows[staff_id]["cover_overtime_hours"] = round(hours, 1)
+            rows[staff_id]["cover_overtime_weeks"] = overtime_weeks[staff_id]
 
     for assignment in assignments:
         row = rows.get(assignment.staff_id)
@@ -294,6 +331,7 @@ def _by_department(start_date, end_date):
                 "scheduled_hours": scheduling["scheduled_hours"],
                 "worked_hours": attend["worked_hours"],
                 "overtime_hours": attend["overtime_hours"],
+                "cover_overtime_hours": scheduling["cover_overtime_hours"],
                 "gaps": scheduling["coverage_gaps"],
                 "fill_rate": scheduling["fill_rate"],
                 "absenteeism_rate": attend["absenteeism_rate"],

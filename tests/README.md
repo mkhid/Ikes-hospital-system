@@ -9,7 +9,7 @@ Run from the project root, in this order:
 ```bash
 python seed.py                      # REQUIRED first: see the warning below
 python tests/verify_constraints.py  # re-audits every assignment from scratch
-python tests/verify_workflows.py    # 43 end-to-end checks
+python tests/verify_workflows.py    # 45 end-to-end checks
 python tests/verify_routes.py       # renders every route as all four roles
 ```
 
@@ -23,7 +23,7 @@ python tests/verify_routes.py       # renders every route as all four roles
 > creates and publishes a roster, so a second run against the same database
 > fails five checks spuriously. Always `python seed.py` immediately before it.
 
-Expected on a fresh seed: **0 violations**, **43/43 checks**, all routes as
+Expected on a fresh seed: **0 violations**, **45/45 checks**, all routes as
 expected.
 
 `verify_routes.py` reports `/dashboard/api/presence` as 404 — that path is

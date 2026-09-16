@@ -60,7 +60,14 @@ class Config:
     # read from the environment so a hospital can tune policy without code
     # changes; the Admin > Policy screen writes to the same values at runtime.
     MIN_REST_HOURS = _as_int(os.getenv("MIN_REST_HOURS"), 11)
+    # The contracted week: CONTRACT_SHIFTS_PER_WEEK shifts totalling
+    # MAX_WEEKLY_HOURS. The generator rosters every member of staff up to it,
+    # reduced by one shift for each day of approved leave that week.
     MAX_WEEKLY_HOURS = _as_int(os.getenv("MAX_WEEKLY_HOURS"), 40)
+    CONTRACT_SHIFTS_PER_WEEK = _as_int(os.getenv("CONTRACT_SHIFTS_PER_WEEK"), 5)
+    # Overtime ceiling, reachable only when covering a colleague's leave or
+    # absence. Never used by the generator for an ordinary roster.
+    MAX_COVER_WEEKLY_HOURS = _as_int(os.getenv("MAX_COVER_WEEKLY_HOURS"), 48)
     MAX_CONSECUTIVE_DAYS = _as_int(os.getenv("MAX_CONSECUTIVE_DAYS"), 6)
     MAX_CONSECUTIVE_NIGHTS = _as_int(os.getenv("MAX_CONSECUTIVE_NIGHTS"), 3)
     MIN_DAYS_OFF_PER_WEEK = _as_int(os.getenv("MIN_DAYS_OFF_PER_WEEK"), 1)

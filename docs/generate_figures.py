@@ -72,13 +72,14 @@ FIGURES = [
         file_label="app/services/scheduler.py  ·  SchedulingEngine.generate()",
         out="fig_4_06_engine_overview.png",
         caption=(
-            "The entry point that produces one department's roster for one week, and the clearest "
-            "statement of the hybrid design.\n"
-            "Demand is assembled first, then Phase 1 constructs a feasible roster and Phase 2 "
-            "improves it. The fairness cost is measured after each phase, which is what produces "
-            "the improvement figure reported to the manager and stored on the roster. Timing is "
-            "recorded around the whole operation: measured across the six departments, a complete "
-            "hospital roster is generated in approximately 1.5 seconds."
+            "The entry point that produces one department's roster for one week, and the clearest statement of the hybrid design.\n"
+            "Demand is assembled first. Phase 1 constructs a feasible roster that meets minimum "
+            "staffing, then brings every member of staff up to their contracted 40-hour week of "
+            "five 8-hour shifts, less one shift per day of approved leave. Phase 2 improves the "
+            "roster, and a final top-up restores anyone the optimiser moved a shift away from. The "
+            "fairness cost is measured after each phase, which is what produces the improvement "
+            "figure reported to the manager and stored on the roster. Measured across the six "
+            "departments, a complete hospital roster is generated in approximately 3.3 seconds."
         ),
     ),
     dict(
@@ -91,11 +92,13 @@ FIGURES = [
         caption=(
             "Fills every required slot using only staff who satisfy all hard constraints.\n"
             "The week is walked in calendar order with night shifts resolved first, because each "
-            "decision constrains the next: whether a nurse may take Tuesday morning depends on what "
-            "they worked on Monday. For each slot the best candidate is selected and placed. Where "
-            "no legal candidate exists the slot is recorded as a coverage gap and escalated, rather "
-            "than filled by breaking a rule. A roster is therefore feasible by construction and is "
-            "never repaired after the fact."
+            "decision constrains the next: whether a nurse may take Tuesday morning depends on what"
+            " they worked on Monday. For each slot the best candidate is selected and placed. Where"
+            " no legal candidate exists the slot is recorded as a coverage gap and escalated, "
+            "rather than filled by breaking a rule. Only minimum staffing is filled here; the "
+            "shifts that bring staff up to their contracted hours are added afterwards, so they "
+            "never compete with required cover. A roster is therefore feasible by construction and "
+            "is never repaired after the fact."
         ),
     ),
     dict(
@@ -106,14 +109,13 @@ FIGURES = [
         file_label="app/services/constraints.py  ·  HardConstraintChecker._rest_violation()",
         out="fig_4_08_rest_constraint.png",
         caption=(
-            "Enforces the minimum rest period between shifts, and with it the requirement that a "
-            "night worker must not take the following morning or afternoon shift.\n"
+            "Enforces the minimum rest period between shifts, and with it the requirement that a night worker must not take the following morning or afternoon shift.\n"
             "The proposed shift is compared against the two days either side. Overlap is rejected "
             "outright; otherwise the gap to the neighbouring shift is measured and rejected if it "
             "falls below the eleven-hour minimum. The night rule is not coded as a special case: a "
-            "night shift ends at 07:00, so a 07:00 morning start leaves zero hours of rest and a "
-            "14:00 afternoon start leaves seven, both below the minimum. A following night shift "
-            "begins at 22:00, leaving fifteen hours, which is what still permits night rotations."
+            "night shift ends at 06:00, so a 06:00 morning start leaves zero hours of rest and a "
+            "14:00 afternoon start leaves eight, both below the minimum. A following night shift "
+            "begins at 22:00, leaving sixteen hours, which is what still permits night rotations."
         ),
     ),
     dict(
@@ -145,11 +147,16 @@ FIGURES = [
         caption=(
             "Improves a feasible roster by hill climbing over three neighbourhood moves.\n"
             "Each iteration selects a move at random: fill a recorded coverage gap, reassign one "
-            "slot to a different staff member, or swap two staff between two slots. Every candidate "
-            "move is re-validated by the same hard-constraint checker used in Phase 1, so "
-            "feasibility is an invariant of the entire search rather than something verified at the "
-            "end. Only strictly improving moves are kept. Measured across the six departments, this "
-            "phase reduced the fairness cost by between 26 and 62 per cent."
+            "slot to a different staff member, or swap two staff between two slots. Every candidate"
+            " move is re-validated by the same hard-constraint checker used in Phase 1, so "
+            "feasibility is an invariant of the entire search rather than something verified at the"
+            " end. Only strictly improving moves are kept. Because Phase 1 has already brought "
+            "everyone to their contracted hours, no reassignment can succeed once the whole "
+            "department is at contract, so those iterations are spent on swaps, which preserve each"
+            " person's hours. Measured over three weeks across the rostering departments, this "
+            "phase reduced the fairness cost by up to 38 per cent. It made no change where the cost"
+            " was already at its floor, as in Pharmacy, where two of the six staff are not cleared "
+            "for night duty."
         ),
     ),
     # ---------------- the remaining Chapter 4.4 modules ----------------
@@ -160,17 +167,19 @@ FIGURES = [
         dotted="release_and_refill",
         file_label="app/services/reoptimizer.py  ·  release_and_refill()  ·  core replacement loop",
         out="fig_4_11_reoptimiser.png",
-        keep=[(97, 99), (101, 140)],
+        keep=[(115, 123), (134, 185)],
         caption=(
-            "Fills each shift released by approved leave or a reported absence, without human "
-            "intervention.\n"
-            "For every vacated shift the engine excludes staff already holding that slot, then ranks "
-            "the remaining colleagues by the same fairness objective used during generation and "
-            "assigns the best candidate. The original assignment is preserved as VACATED and a new "
-            "REPLACEMENT row is written alongside it, so the roster records both who was scheduled "
-            "and who actually covers. The in-memory state is updated as it goes, so a second gap in "
-            "the same run sees the cover just assigned. Each reassignment is written to the audit "
-            "trail and the replacement is notified."
+            "Handles each shift released by approved leave or a reported absence, without human intervention.\n"
+            "Staff are rostered to their contracted week, so most shifts carry more people than "
+            "their minimum. A released shift is therefore checked first, and left as it is if it "
+            "still meets minimum staffing. Otherwise the remaining colleagues are ranked by the "
+            "same fairness objective used during generation, and anyone who can take the shift "
+            "within their 40-hour week is preferred over anyone who would need overtime, which is "
+            "capped at 48 hours. If no one can take the shift as things stand, the engine tries a "
+            "chained move: it frees a colleague from their own shift the same day or a day either "
+            "side, where that shift is above its minimum. The original assignment is preserved as "
+            "VACATED and a new REPLACEMENT row is written alongside it, and the in-memory state is "
+            "updated as it goes, so a second gap in the same run sees the cover just assigned."
         ),
     ),
     dict(

@@ -15,7 +15,8 @@ from app.models import Assignment, Department, LeaveRequest, Staff
 app = create_app()
 
 MIN_REST_HOURS = 11
-MAX_WEEKLY_HOURS = 40
+MAX_WEEKLY_HOURS = 40         # the contracted week, five 8-hour shifts
+MAX_COVER_WEEKLY_HOURS = 48   # ceiling when covering leave or absence
 MAX_CONSEC_DAYS = 6
 MAX_CONSEC_NIGHTS = 3
 
@@ -74,17 +75,38 @@ with app.app_context():
                         f"{second.shift.code} {second.work_date}"
                     )
 
-    # 3. Weekly hours
+    # 3. Weekly hours. Ordinary rostered shifts never take anyone past the
+    # contracted week; only cover (REPLACEMENT rows) may, and never past the
+    # cover ceiling. Leave is deliberately not netted off here: leave approved
+    # after publication releases only the days someone was working, so a person
+    # on leave over their rest days rightly keeps a full week.
+    hours_summary = defaultdict(int)
+    cover_overtime_hours = 0.0
     for staff_id, items in by_staff.items():
-        weeks = defaultdict(float)
+        weeks = defaultdict(lambda: {"ordinary": 0.0, "cover": 0.0})
         for item in items:
             monday = item.work_date - timedelta(days=item.work_date.weekday())
-            weeks[monday] += item.shift.duration_hours
-        for monday, hours in weeks.items():
-            if hours > MAX_WEEKLY_HOURS:
+            kind = "cover" if item.status == "REPLACEMENT" else "ordinary"
+            weeks[monday][kind] += item.shift.duration_hours
+        for monday, h in weeks.items():
+            total = h["ordinary"] + h["cover"]
+            if h["ordinary"] > MAX_WEEKLY_HOURS:
                 violations.append(
-                    f"HOURS staff={staff_id} week {monday}: {hours}h > {MAX_WEEKLY_HOURS}h"
+                    f"HOURS staff={staff_id} week {monday}: {h['ordinary']}h of ordinary "
+                    f"shifts > {MAX_WEEKLY_HOURS}h contract"
                 )
+            if total > MAX_COVER_WEEKLY_HOURS:
+                violations.append(
+                    f"COVER-HOURS staff={staff_id} week {monday}: {total}h > "
+                    f"{MAX_COVER_WEEKLY_HOURS}h"
+                )
+            if total > MAX_WEEKLY_HOURS:
+                hours_summary["overtime"] += 1
+                cover_overtime_hours += total - MAX_WEEKLY_HOURS
+            elif total == MAX_WEEKLY_HOURS:
+                hours_summary["at_contract"] += 1
+            else:
+                hours_summary["below_contract"] += 1
 
     # 4. Consecutive days and nights
     for staff_id, items in by_staff.items():
@@ -164,6 +186,11 @@ with app.app_context():
         print("  No violations. Every assignment satisfies every hard rule.")
     print(f"\n  Under-staffed shift slots (coverage gaps): {shortfalls}")
     print(f"  Night-followed-by-day-shift cases: {night_then_day}")
+    print(
+        f"  Person-weeks at the {MAX_WEEKLY_HOURS}h contract: {hours_summary['at_contract']}, "
+        f"below it: {hours_summary['below_contract']}, "
+        f"in cover overtime: {hours_summary['overtime']} ({cover_overtime_hours:.0f}h)"
+    )
 
     # Fairness
     print("\nFAIRNESS: night shifts per staff member, current week")

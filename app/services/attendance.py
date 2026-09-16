@@ -57,7 +57,7 @@ def expected_assignment(staff, moment=None, exclude_attended=True):
     One record per rostered shift is a database constraint, so returning an
     already-attended shift here would make a second sign-in fail at the insert
     rather than being handled. This matters most after a night shift: it ends at
-    07:00 but stays inside the late window until early afternoon, so someone who
+    06:00 but stays inside the late window until the middle of the day, so someone who
     worked it, signed out, and then signed in again would otherwise collide with
     their own completed record.
     """

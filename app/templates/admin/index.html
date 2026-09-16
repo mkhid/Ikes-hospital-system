@@ -137,8 +137,12 @@
         <dl class="row small mb-0">
           <dt class="col-6 text-secondary fw-normal">Minimum rest</dt>
           <dd class="col-6 fw-semibold">{{ policy.min_rest_hours }} hours</dd>
-          <dt class="col-6 text-secondary fw-normal">Maximum week</dt>
-          <dd class="col-6 fw-semibold">{{ policy.max_weekly_hours }} hours</dd>
+          <dt class="col-6 text-secondary fw-normal">Contracted week</dt>
+          <dd class="col-6 fw-semibold">{{ policy.max_weekly_hours }} hours, {{ policy.contract_shifts }} shifts</dd>
+          <dt class="col-6 text-secondary fw-normal">Leave weeks</dt>
+          <dd class="col-6 fw-semibold">One shift less per leave day</dd>
+          <dt class="col-6 text-secondary fw-normal">Cover overtime</dt>
+          <dd class="col-6 fw-semibold">Up to {{ policy.max_cover_weekly_hours }} hours</dd>
           <dt class="col-6 text-secondary fw-normal">Consecutive days</dt>
           <dd class="col-6 fw-semibold">{{ policy.max_consecutive_days }} maximum</dd>
           <dt class="col-6 text-secondary fw-normal">Consecutive nights</dt>

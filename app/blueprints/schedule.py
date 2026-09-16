@@ -60,6 +60,8 @@ def _generation_messages(generated, skipped):
         weeks = len(generated)
         filled = sum(r.slots_filled for r in generated)
         required = sum(r.slots_required for r in generated)
+        extra = sum(r.extra_shifts for r in generated)
+        short = sum(len(r.under_contract) for r in generated)
         gaps = sum(r.gap_count for r in generated)
         seconds = sum(r.seconds for r in generated)
         period = (
@@ -73,16 +75,23 @@ def _generation_messages(generated, skipped):
         if gaps:
             messages.append((
                 f"Generated {noun} for {period} with {gaps} coverage gap(s). "
-                f"{filled} of {required} shifts filled in {seconds:.2f}s.",
+                f"{filled} of {required} required shifts covered in {seconds:.2f}s.",
                 "warning",
             ))
         else:
             improvement = sum(r.improvement_percent for r in generated) / weeks
             messages.append((
-                f"Generated {noun} for {period}: all {filled} shifts filled in "
-                f"{seconds:.2f}s, fairness improved by {improvement:.0f}% "
-                f"during optimisation.",
+                f"Generated {noun} for {period}: all {filled} required shifts "
+                f"covered, plus {extra} more to bring staff to their contracted "
+                f"40-hour week, in {seconds:.2f}s. Fairness improved by "
+                f"{improvement:.0f}% during optimisation.",
                 "success",
+            ))
+        if short:
+            messages.append((
+                f"{short} staff member(s) could not be legally rostered to their "
+                f"full contracted hours; the roster notes show who.",
+                "warning",
             ))
 
     if skipped:
@@ -264,6 +273,8 @@ def generate():
                 new={
                     "slots_required": result.slots_required,
                     "slots_filled": result.slots_filled,
+                    "extra_shifts": result.extra_shifts,
+                    "staff_below_contract": len(result.under_contract),
                     "coverage_gaps": result.gap_count,
                     "fairness_cost": round(result.cost_after_optimisation, 3),
                     "improvement_percent": result.improvement_percent,

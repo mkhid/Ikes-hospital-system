@@ -200,7 +200,8 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
                 ("Hours scheduled", scheduling["scheduled_hours"]),
                 ("Hours worked", attendance["worked_hours"]),
                 ("Utilisation", f"{attendance['utilisation']}%"),
-                ("Overtime hours", attendance["overtime_hours"]),
+                ("Cover overtime hrs", scheduling["cover_overtime_hours"]),
+                ("Hours stayed late", attendance["overtime_hours"]),
                 ("Absenteeism", f"{attendance['absenteeism_rate']}%"),
                 ("Punctuality", f"{attendance['punctuality_rate']}%"),
                 ("Leave days approved", leave["days_approved"]),
@@ -222,7 +223,8 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
         "Sched hrs",
         "Worked hrs",
         "Util %",
-        "Overtime",
+        "Cover OT",
+        "Stayed late",
         "Late",
         "Absent",
         "Leave days",
@@ -242,6 +244,7 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
                 row["scheduled_hours"],
                 row["worked_hours"],
                 f"{row['utilisation']}%",
+                row["cover_overtime_hours"],
                 row["overtime_hours"],
                 row["late_count"],
                 row["absences"],
@@ -251,15 +254,18 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
         if row["absences"] > 0:
             flagged.append(index)
 
-    widths = [34 * mm, 22 * mm, 20 * mm] + [16 * mm] * 10
+    widths = [32 * mm, 21 * mm, 19 * mm] + [15 * mm] * 11
     story.append(
-        _table(rows, widths, align_right=tuple(range(3, 13)), highlight_rows=flagged)
+        _table(rows, widths, align_right=tuple(range(3, 14)), highlight_rows=flagged)
     )
     story.append(Spacer(1, 4))
     story.append(
         Paragraph(
             "Rows in red carry at least one recorded absence. Utilisation is hours "
-            "actually worked on site as a percentage of hours rostered.",
+            "actually worked on site as a percentage of hours rostered. Cover OT is "
+            "rostered hours beyond the 40-hour contracted week, reached only by "
+            "covering a colleague's leave or absence. Stayed late is time on site "
+            "after the end of a shift.",
             styles["small"],
         )
     )
@@ -274,7 +280,8 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
                 "Shifts",
                 "Sched hrs",
                 "Worked hrs",
-                "Overtime",
+                "Cover OT",
+                "Stayed late",
                 "Gaps",
                 "Fill %",
                 "Absentee %",
@@ -289,6 +296,7 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
                     row["shifts"],
                     row["scheduled_hours"],
                     row["worked_hours"],
+                    row["cover_overtime_hours"],
                     row["overtime_hours"],
                     row["gaps"],
                     f"{row['fill_rate']}%",
@@ -299,8 +307,8 @@ def staff_audit_report_pdf(start_date, end_date, department=None, actor=None):
         story.append(
             _table(
                 dept_rows,
-                [44 * mm] + [22 * mm] * 9,
-                align_right=tuple(range(1, 10)),
+                [42 * mm] + [20 * mm] * 10,
+                align_right=tuple(range(1, 11)),
             )
         )
 
@@ -501,7 +509,8 @@ def staff_audit_csv(start_date, end_date, department=None):
         "Scheduled hours",
         "Worked hours",
         "Utilisation %",
-        "Overtime hours",
+        "Cover overtime hours",
+        "Hours stayed late",
         "Late arrivals",
         "Late minutes",
         "Absences",
@@ -523,6 +532,7 @@ def staff_audit_csv(start_date, end_date, department=None):
                 row["scheduled_hours"],
                 row["worked_hours"],
                 row["utilisation"],
+                row["cover_overtime_hours"],
                 row["overtime_hours"],
                 row["late_count"],
                 row["late_minutes"],

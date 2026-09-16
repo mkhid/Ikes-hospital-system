@@ -28,11 +28,11 @@ Two source documents defined the scope:
 Both are `.docx` files kept in the working folder but excluded from version
 control, because they carry the author's name and student index number.
 
-Where they disagree, the brief wins (see §7, shift hours).
+Where they disagree, the brief wins, unless the client has since changed it (see §7, shift hours).
 
 ---
 
-> **All seeded data is fabricated.** The 28 staff, their contact details and
+> **All seeded data is fabricated.** The 32 staff, their contact details and
 > every attendance, lateness and absence record are invented by `seed.py`. They
 > describe no real person. Keep it that way: this is a public repository.
 
@@ -43,11 +43,15 @@ Verbatim requirements, all implemented:
 1. Web portal for a hospital.
 2. Six departments: HR, Nurse, Doctor, Pharmacy, Lab, Admin.
 3. Six staff per department **except** HR (2) and Admin (2) — 28 total.
+   Nursing has since grown to ten, so the seed builds 32.
 4. Every staff member has a login, a personal profile, and can see schedules
    published by their manager or HR.
 5. **The primary feature is automated roster generation.** One staff member per
    department is the manager; they generate and publish, and all members see it.
 6. Three shifts: morning 07:00–14:00, afternoon 14:00–22:00, night 22:00–07:00.
+   **Since changed by the client** to three 8-hour shifts, 06:00–14:00,
+   14:00–22:00 and 22:00–06:00, with a contracted week of five shifts, 40 hours
+   (see §7).
 7. Hard constraints enforced. Specifically: **someone who works a night shift
    must not then work the morning or afternoon shift.**
 8. When a staff member is off or on leave, the system **automatically
@@ -144,13 +148,23 @@ decision constrains the next. A staff member is only ever offered a slot if
 they pass **every** hard constraint. A roster is therefore legal *by
 construction*, never repaired afterwards.
 
+Minimum staffing is filled first. Phase 1 then brings every member of staff up
+to their **contracted week** (`_fill_to_contract`): five 8-hour shifts, less one
+shift per day of approved leave. Staff take turns one shift at a time, furthest
+short first; each extra shift goes on a day shift before a night and a weekday
+before a weekend. The checker will not let anyone past their contract during
+generation, so a person who cannot legally reach it is left short and named in
+the roster notes. Phase 2's fill-a-gap move may give up one of these contracted
+shifts to cover a required slot: required cover always outranks contract top-up.
+
 Hard constraints, all configurable via `.env`:
 
 | Rule | Default |
 |---|---|
 | One shift per person per day | always |
 | Minimum rest between shifts | 11 hours |
-| Maximum weekly hours | 40 |
+| Contracted week | 40 h, 5 shifts, less one shift per leave day |
+| Cover overtime | up to 48 h, only when covering leave or absence |
 | Maximum consecutive working days | 6 |
 | Maximum consecutive night shifts | 3 |
 | Minimum days off per week | 1 |
@@ -159,9 +173,9 @@ Hard constraints, all configurable via `.env`:
 | Departmental minimum staffing | per shift, per department |
 
 **The night-then-day rule is not special-cased.** It falls out of the rest
-period: the night shift ends 07:00, so a 07:00 morning start gives zero rest
-and a 14:00 afternoon start gives seven — both under eleven. A following night
-starts 22:00 (fifteen hours), which is what still permits night rotations.
+period: the night shift ends 06:00, so a 06:00 morning start gives zero rest
+and a 14:00 afternoon start gives eight — both under eleven. A following night
+starts 22:00 (sixteen hours), which is what still permits night rotations.
 Understand this before touching `_rest_violation`.
 
 ### Phase 2 — heuristic optimisation (`fairness.py`, `scheduler.py`)
@@ -175,17 +189,44 @@ hours, plus a small preference penalty. **Fairness is cumulative, not weekly**:
 counts from the previous four weeks are folded in before the current week is
 scored (`HISTORY_WEEKS = 4`).
 
+Once the whole department is at contract no reassignment can succeed, so those
+iterations are spent on swaps, which preserve each person's hours.
+
 Where no legal assignment exists, the slot becomes a recorded **coverage gap**
 and is escalated — never filled by breaking a rule.
+
+### Leave, absence and overtime (`reoptimizer.py`)
+
+A released shift that still meets minimum staffing is left alone. Otherwise the
+checker is built with `allow_overtime=True`: a colleague within their 40-hour
+week is preferred, then one going into overtime, capped at contract + 8 h (48 h
+in a full week). If no one qualifies, `_free_a_colleague` tries a one-level
+chained move: it frees a colleague from their own shift the same day or a day
+either side, if that shift is above its minimum. Manual overrides and the gap
+retry button also allow cover overtime, since both write a `REPLACEMENT`.
+
+**Overtime is defined against the full 40-hour week, not the leave-reduced
+contract**, everywhere: the re-optimiser, analytics, the PDF/CSV reports and
+`verify_constraints.py`. Leave approved after publication releases only the days
+someone was actually working, so a person whose leave fell on their rest days
+still works an ordinary 40-hour week. Reports label rostered hours past 40
+**cover overtime**, distinct from attendance's **stayed late**.
 
 ### Measured performance
 
 | Metric | Result |
 |---|---|
-| One department (6 staff, 26 shifts) | ~0.25 s |
-| Whole hospital (28 staff, 102 shifts) | ~1.5 s |
-| Projected at 100 staff | ~5 s (thesis target: under 5 minutes) |
-| Phase 2 fairness cost reduction | 26–62 % |
+| One department (Nursing: 10 staff, 50 shifts) | ~0.85 s |
+| Whole hospital (32 staff, 160 shifts) | ~3.3 s |
+| Projected at 100 staff (linear) | ~10 s (thesis target: under 5 minutes) |
+| Phase 2 fairness cost reduction | up to 38 % (was 26–62 % before contracts) |
+
+Phase 2 improves less since contracts: Phase 1 already equalises hours, leaving
+nights, weekends and preferences. It makes no change where that cost is at its
+floor, as in Pharmacy, where two of six staff are not cleared for nights. Before
+`ScheduleState` kept a per-person index, contract generation took ~5 s per
+department: `weekly_hours` scanned every assignment in the department on each of
+~20,000 checks.
 
 ---
 
@@ -196,8 +237,8 @@ converting them with proper fixtures is the top pending task (§8).
 
 | Suite | What it does | Last result |
 |---|---|---|
-| `tests/verify_constraints.py` | Independently re-audits every assignment against all hard rules, without using the engine's own code | **0 violations** across 409 assignments |
-| `tests/verify_workflows.py` | 43 checks: login, generate, publish, leave→re-optimise, attendance lifecycle, override rejection, audit tampering | **43/43** |
+| `tests/verify_constraints.py` | Independently re-audits every assignment against all hard rules, without using the engine's own code | **0 violations** across 637 assignments; 126 person-weeks at 40 h, 2 below (leave) |
+| `tests/verify_workflows.py` | 45 checks: login, generate, publish, leave→re-optimise, attendance lifecycle, override rejection, audit tampering | **45/45** |
 | `tests/verify_routes.py` | Renders every GET route as all four roles | All pass; RBAC denies correctly |
 
 See `tests/README.md` for how to run them.
@@ -217,11 +258,13 @@ verified over the LAN address, PDF generated, data persisted across restart,
 
 Do not undo these without understanding why they were made.
 
-**Shift hours follow the brief, not the thesis.** Morning 7h, afternoon 8h,
-night 9h. Thesis Appendix C.1 says 8/8/8. The engine enforces weekly hours and
-rest gaps rather than a flat 8h rule, so either works — but **the document and
-the software currently disagree** and an examiner comparing them will notice.
-*User decision pending.*
+**Shifts are 8/8/8, with a 40-hour, five-shift contracted week.** The brief
+specified 7/8/9-hour shifts; the client changed this, which also brings the
+software into line with thesis Appendix C.1. Morning 06:00–14:00, afternoon
+14:00–22:00, night 22:00–06:00. HR and Admin work the morning shift, so their
+office day currently starts at 06:00. *Open question: whether they should have
+a separate office shift, e.g. 08:00–16:00.* **The thesis text describing shift times, weekly hours and the algorithm
+still needs updating to match.**
 
 **Naive local datetimes, no timezone handling.** Ghana is GMT year-round with no
 DST, so local time and UTC coincide. This keeps rostered times, attendance
@@ -262,7 +305,8 @@ Ordered by value.
    the README implies migrations work, but `flask db init` was never run —
    schema currently comes from `db.create_all()` in `seed.py`. Either
    initialise it or drop the claim.
-3. **Resolve the shift-hours contradiction** (§7). User decision.
+3. ~~Resolve the shift-hours contradiction.~~ Resolved: 8/8/8 (§7). The thesis
+   text still needs updating to the new shift times, contract and algorithm.
 4. **Live email/SMS credentials** if real delivery is wanted for the defence.
 5. ~~`docs/` is an empty folder.~~ Now holds the thesis code figures and
    their generator (`docs/generate_figures.py`). **Regenerate them after
@@ -272,12 +316,16 @@ Ordered by value.
 
 ### Known limitation, documented not broken
 
-**The re-optimiser does not chain moves.** When leave frees a shift, it picks
-the fairest *legally eligible* colleague — but on any given day most of a
-six-person department is already assigned, so often only one person qualifies.
-In one seeded week a nurse reached 44h against what was then a 48h cap (now 40h). Legal and correct, but
-a chained move (shuffling a third person to free a fairer candidate) would
-improve it. Good "future work" material for Chapter 5.5.
+**The re-optimiser chains only one move deep.** With everyone rostered to
+contract, the usual obstacle to cover is a colleague's own shift that day or the
+day either side. `_free_a_colleague` moves them off it when that shift is above
+its minimum. It does not go further, such as moving a third person onto that
+shift so it could be freed even at its minimum. Measured on next week's rosters:
+one person on three days' leave per department released 15 shifts, of which 8
+needed no cover, 5 were covered (4 by chained moves) and 2 became gaps. With
+half of each department on overlapping leave, 13 of 38 became gaps, 4 of them
+unavoidable (both Admin or both HR staff away). Deeper chains are good "future
+work" material for Chapter 5.5.
 
 ---
 
@@ -309,11 +357,11 @@ Things that cost time to discover.
 
 ```bash
 pip install -r requirements.txt
-python seed.py          # builds 28 staff, 24 rosters, ~2 weeks of history
+python seed.py          # builds 32 staff, 24 rosters, ~2 weeks of history
 python run.py           # http://127.0.0.1:5000
 ```
 
-Sign in as `TH-ADM-001` / `Password123`. All 28 accounts share that password.
+Sign in as `TH-ADM-001` / `Password123`. All 32 accounts share that password.
 
 ```bash
 python seed.py                        # reset demo data any time

@@ -19,12 +19,12 @@ one figure per remaining implementation module of Chapter 4.4.
 
 | Figure | File | Illustrates | Source |
 |---|---|---|---|
-| 4.6 | `fig_4_06_engine_overview.png` | The two-phase algorithm, top level | `scheduler.py` L123–153 |
-| 4.7 | `fig_4_07_phase1_construct.png` | Phase 1 — feasible construction | `scheduler.py` L280–296 |
-| 4.8 | `fig_4_08_rest_constraint.png` | Hard constraints — the rest-period rule | `constraints.py` L220–255 |
+| 4.6 | `fig_4_06_engine_overview.png` | The two-phase algorithm, top level | `scheduler.py` L142–186 |
+| 4.7 | `fig_4_07_phase1_construct.png` | Phase 1 — feasible construction | `scheduler.py` L314–330 |
+| 4.8 | `fig_4_08_rest_constraint.png` | Hard constraints — the rest-period rule | `constraints.py` L278–313 |
 | 4.9 | `fig_4_09_fairness_objective.png` | The fairness objective function | `fairness.py` L28–120 |
-| 4.10 | `fig_4_10_phase2_optimise.png` | Phase 2 — heuristic optimisation | `scheduler.py` L330–361 |
-| 4.11 | `fig_4_11_reoptimiser.png` | Leave and absence — auto re-optimisation | `reoptimizer.py` L97–140 |
+| 4.10 | `fig_4_10_phase2_optimise.png` | Phase 2 — heuristic optimisation | `scheduler.py` L421–455 |
+| 4.11 | `fig_4_11_reoptimiser.png` | Leave and absence — auto re-optimisation | `reoptimizer.py` L115–185 |
 | 4.12 | `fig_4_12_attendance.png` | Attendance tracking — reconciliation | `attendance.py` L249–274 |
 | 4.13 | `fig_4_13_availability.png` | Real-time availability / dashboard | `availability.py` L104–139 |
 | 4.14 | `fig_4_14_notifications.png` | Notification service — email, SMS, in-app | `notifications.py` L152–214 |
@@ -60,12 +60,15 @@ lines and will sit comfortably beside body text.
 ### Figure 4.6 — The two-phase scheduling algorithm
 
 The entry point that produces one department's roster for one week, and the
-clearest statement of the hybrid design. Demand is assembled first, then Phase 1
-constructs a feasible roster and Phase 2 improves it. The fairness cost is
-measured after each phase, which is what produces the improvement figure
-reported to the manager and stored on the roster. Timing is recorded around the
-whole operation: measured across the six departments, a complete hospital roster
-is generated in approximately 1.5 seconds.
+clearest statement of the hybrid design. Demand is assembled first. Phase 1
+constructs a feasible roster that meets minimum staffing, then brings every
+member of staff up to their contracted 40-hour week of five 8-hour shifts, less
+one shift per day of approved leave. Phase 2 improves the roster, and a final
+top-up restores anyone the optimiser moved a shift away from. The fairness cost
+is measured after each phase, which is what produces the improvement figure
+reported to the manager and stored on the roster. Measured across the six
+departments, a complete hospital roster is generated in approximately 3.3
+seconds.
 
 ### Figure 4.7 — Phase 1: constructing a feasible roster
 
@@ -74,7 +77,9 @@ week is walked in calendar order with night shifts resolved first, because each
 decision constrains the next: whether a nurse may take Tuesday morning depends
 on what they worked on Monday. For each slot the best candidate is selected and
 placed. Where no legal candidate exists the slot is recorded as a coverage gap
-and escalated, rather than filled by breaking a rule. A roster is therefore
+and escalated, rather than filled by breaking a rule. Only minimum staffing is
+filled here; the shifts that bring staff up to their contracted hours are added
+afterwards, so they never compete with required cover. A roster is therefore
 feasible by construction and is never repaired after the fact.
 
 ### Figure 4.8 — Hard-constraint verification: the rest-period rule
@@ -84,9 +89,9 @@ that a night worker must not take the following morning or afternoon shift. The
 proposed shift is compared against the two days either side. Overlap is rejected
 outright; otherwise the gap to the neighbouring shift is measured and rejected
 if it falls below the eleven-hour minimum. The night rule is not coded as a
-special case: a night shift ends at 07:00, so a 07:00 morning start leaves zero
-hours of rest and a 14:00 afternoon start leaves seven, both below the minimum.
-A following night shift begins at 22:00, leaving fifteen hours, which is what
+special case: a night shift ends at 06:00, so a 06:00 morning start leaves zero
+hours of rest and a 14:00 afternoon start leaves eight, both below the minimum.
+A following night shift begins at 22:00, leaving sixteen hours, which is what
 still permits night rotations.
 
 ### Figure 4.9 — Quantifying fairness: the objective function
@@ -107,21 +112,29 @@ iteration selects a move at random: fill a recorded coverage gap, reassign one
 slot to a different staff member, or swap two staff between two slots. Every
 candidate move is re-validated by the same hard-constraint checker used in Phase
 1, so feasibility is an invariant of the entire search rather than something
-verified at the end. Only strictly improving moves are kept. Measured across the
-six departments, this phase reduced the fairness cost by between 26 and 62 per
-cent.
+verified at the end. Only strictly improving moves are kept. Because Phase 1 has
+already brought everyone to their contracted hours, no reassignment can succeed
+once the whole department is at contract, so those iterations are spent on
+swaps, which preserve each person's hours. Measured over three weeks across the
+rostering departments, this phase reduced the fairness cost by up to 38 per
+cent. It made no change where the cost was already at its floor, as in Pharmacy,
+where two of the six staff are not cleared for night duty.
 
 ### Figure 4.11 — Automatic re-optimisation after approved leave
 
-Fills each shift released by approved leave or a reported absence, without human
-intervention. For every vacated shift the engine excludes staff already holding
-that slot, then ranks the remaining colleagues by the same fairness objective
-used during generation and assigns the best candidate. The original assignment
-is preserved as VACATED and a new REPLACEMENT row is written alongside it, so
-the roster records both who was scheduled and who actually covers. The in-memory
-state is updated as it goes, so a second gap in the same run sees the cover just
-assigned. Each reassignment is written to the audit trail and the replacement is
-notified.
+Handles each shift released by approved leave or a reported absence, without
+human intervention. Staff are rostered to their contracted week, so most shifts
+carry more people than their minimum. A released shift is therefore checked
+first, and left as it is if it still meets minimum staffing. Otherwise the
+remaining colleagues are ranked by the same fairness objective used during
+generation, and anyone who can take the shift within their 40-hour week is
+preferred over anyone who would need overtime, which is capped at 48 hours. If
+no one can take the shift as things stand, the engine tries a chained move: it
+frees a colleague from their own shift the same day or a day either side, where
+that shift is above its minimum. The original assignment is preserved as VACATED
+and a new REPLACEMENT row is written alongside it, and the in-memory state is
+updated as it goes, so a second gap in the same run sees the cover just
+assigned.
 
 ### Figure 4.12 — Attendance reconciliation against the published roster
 

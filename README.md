@@ -8,7 +8,7 @@ Built for the BSc Information Technology thesis
 *Intelligent Hospital Workforce Scheduling System*, Advanced School of Systems
 and Data Studies, with Taifa Hospital as the case study.
 
-> **All data in this repository is fabricated.** The 28 staff members, their
+> **All data in this repository is fabricated.** The 32 staff members, their
 > names, contact details, rosters, attendance records, lateness and absences are
 > invented by [`seed.py`](seed.py) to demonstrate the system. They do not
 > describe any real person, and no real hospital records were used. Every
@@ -60,7 +60,7 @@ Every seeded account uses the password `Password123`.
 | Nursing Manager | `TH-NUR-001` | Generate and publish the Nursing roster |
 | Doctor (staff) | `TH-DOC-002` | Own profile, schedule, leave and attendance |
 
-Any of the 28 seeded staff numbers work: `TH-NUR-001`…`006`,
+Any of the 32 seeded staff numbers work: `TH-NUR-001`…`010`,
 `TH-DOC-001`…`006`, `TH-PHA-001`…`006`, `TH-LAB-001`…`006`,
 `TH-HRM-001`…`002`, `TH-ADM-001`…`002`.
 
@@ -68,24 +68,27 @@ Any of the 28 seeded staff numbers work: `TH-NUR-001`…`006`,
 
 ## The hospital as seeded
 
-Six departments, 28 staff, one manager each.
+Six departments, 32 staff, one manager each.
 
 | Department | Code | Staff | Runs | Minimum per shift (weekday / weekend) |
 |---|---|---|---|---|
-| Nursing | NUR | 6 | 24/7 | Morning 2/1, Afternoon 1/1, Night 1/1 |
+| Nursing | NUR | 10 | 24/7 | Morning 2/1, Afternoon 1/1, Night 1/1 |
 | Medical (Doctors) | DOC | 6 | 24/7 | Morning 2/1, Afternoon 1/1, Night 1/1 |
-| Pharmacy | PHA | 6 | Extended hours | Morning 2/1, Afternoon 1/1 |
+| Pharmacy | PHA | 6 | 24/7 | Morning 2/1, Afternoon 1/1, Night 1/1 |
 | Laboratory | LAB | 6 | 24/7 | Morning 1/1, Afternoon 1/1, Night 1/1 |
 | Human Resources | HRM | 2 | Office hours | Morning 1/0 |
 | Administration | ADM | 2 | Office hours | Morning 1/0 |
 
-Shift windows follow the project brief:
+Three equal 8-hour shifts, so a five-shift week is always exactly 40 hours:
 
 | Shift | Window | Duration |
 |---|---|---|
-| Morning | 07:00 – 14:00 | 7 hours |
+| Morning | 06:00 – 14:00 | 8 hours |
 | Afternoon | 14:00 – 22:00 | 8 hours |
-| Night | 22:00 – 07:00 (next day) | 9 hours |
+| Night | 22:00 – 06:00 (next day) | 8 hours |
+
+The original brief specified 7-, 8- and 9-hour shifts. The client moved to three
+8-hour shifts and a contracted week of five shifts, 40 hours.
 
 ---
 
@@ -100,11 +103,19 @@ constrains the next. A staff member is only ever offered a slot if they pass
 **every** hard constraint, so a produced roster is legal by construction rather
 than repaired afterwards.
 
+Minimum staffing is met first. Phase 1 then brings every member of staff up to
+their **contracted week**: five 8-hour shifts, 40 hours, less one shift for each
+day of approved leave that week. These extra shifts go on top of the minimums,
+day shifts before nights and weekdays before weekends, so they never compete
+with required cover. Anyone who cannot legally reach their contract is left
+short and named in the roster notes.
+
 | Hard constraint | Default |
 |---|---|
 | One shift per person per day | always |
 | Minimum rest between shifts | 11 hours |
-| Maximum weekly hours | 40 |
+| Contracted week | 40 hours, 5 shifts, less one shift per leave day |
+| Overtime | only when covering leave or absence, up to 48 hours |
 | Maximum consecutive working days | 6 |
 | Maximum consecutive night shifts | 3 |
 | Minimum days off per week | 1 |
@@ -114,9 +125,9 @@ than repaired afterwards.
 
 The brief's rule that *a night worker must not take the following morning or
 afternoon shift* falls out of the rest period rather than being special-cased.
-The night shift ends at 07:00, so a 07:00 morning start leaves zero hours' rest
-and a 14:00 afternoon start leaves seven — both below the eleven-hour minimum. A
-following night shift starts at 22:00, leaving fifteen hours, which is what makes
+The night shift ends at 06:00, so a 06:00 morning start leaves zero hours' rest
+and a 14:00 afternoon start leaves eight — both below the eleven-hour minimum. A
+following night shift starts at 22:00, leaving sixteen hours, which is what makes
 night rotations possible at all.
 
 ### Phase 2 — heuristic optimisation
@@ -137,15 +148,34 @@ Where no legal assignment exists, the slot is recorded as a **coverage gap** and
 escalated to the manager and HR, rather than filled by breaking a rule. A gap is
 a decision for a human, not a failure of the engine.
 
+### Leave and absence
+
+When leave is approved or an absence reported, the person's shifts in that
+window are released. A released shift that still meets its minimum staffing is
+left as it is. Otherwise a colleague who can take it within their 40-hour week
+is preferred; failing that, cover may go into overtime, up to 48 hours. If no
+one can take the shift as things stand, the re-optimiser tries a chained move,
+freeing a colleague from their own shift the same day or a day either side where
+that shift is above its minimum. Only then is a coverage gap recorded.
+
+Reports show **cover overtime** (rostered hours past 40) separately from
+**stayed late** (time on site after a shift ended).
+
 ### Measured performance
 
 | Metric | Result |
 |---|---|
-| One department (6 staff, 26 shifts) | ~0.25 s |
-| Whole hospital (28 staff, 102 shifts) | ~1.5 s |
-| Projected for 100 staff | ~5 s |
+| One department (Nursing: 10 staff, 50 shifts) | ~0.85 s |
+| Whole hospital (32 staff, 160 shifts) | ~3.3 s |
+| Projected for 100 staff (linear) | ~10 s |
 | Thesis requirement | 100 staff in under 5 minutes |
-| Fairness cost reduction in phase 2 | 26–62 % |
+| Fairness cost reduction in phase 2 | up to 38 % |
+
+Phase 2 improves less than it did before contracted hours were introduced:
+Phase 1 now brings everyone to 40 hours, which equalises hours before the
+optimiser starts, so its remaining work is on nights, weekends and preferences.
+Where that cost is already at its floor, as in Pharmacy, where two staff are not
+cleared for nights, it makes no change.
 
 ---
 
@@ -353,7 +383,9 @@ its footer.
 | `SYSTEM_ABBR` | IHWSS | Short form for tight spaces |
 | `HOSPITAL_NAME` | Taifa Hospital | The institution running this instance |
 | `MIN_REST_HOURS` | 11 | Rest between shifts; enforces the night-then-day rule |
-| `MAX_WEEKLY_HOURS` | 40 | Weekly cap per staff member |
+| `MAX_WEEKLY_HOURS` | 40 | The contracted week, in hours |
+| `CONTRACT_SHIFTS_PER_WEEK` | 5 | Shifts in the contracted week |
+| `MAX_COVER_WEEKLY_HOURS` | 48 | Ceiling when covering leave or absence |
 | `MAX_CONSECUTIVE_DAYS` | 6 | Longest run of working days |
 | `MAX_CONSECUTIVE_NIGHTS` | 3 | Longest run of night shifts |
 | `MIN_DAYS_OFF_PER_WEEK` | 1 | Guaranteed rest days |

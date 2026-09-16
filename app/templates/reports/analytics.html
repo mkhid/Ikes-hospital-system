@@ -81,9 +81,13 @@
 
 <div class="row g-3 mb-3">
   <div class="col-6 col-xl-3">
-    <div class="stat-tile {{ 'is-amber' if report.attendance.overtime_hours }}">
-      <div class="stat-tile__label">Overtime</div>
-      <div class="stat-tile__value">{{ report.attendance.overtime_hours }}h</div>
+    <div class="stat-tile {{ 'is-amber' if report.scheduling.cover_overtime_hours }}">
+      <div class="stat-tile__label">Cover overtime</div>
+      <div class="stat-tile__value">{{ report.scheduling.cover_overtime_hours }}h</div>
+      <div class="stat-tile__meta">
+        {{ report.scheduling.cover_overtime_staff }} staff past the 40-hour week &middot;
+        {{ report.attendance.overtime_hours }}h stayed late
+      </div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
@@ -221,7 +225,8 @@
           <th>Staff</th><th>Dept</th>
           <th class="text-end">Shifts</th><th class="text-end">Nights</th><th class="text-end">Weekends</th>
           <th class="text-end">Rostered</th><th class="text-end">Worked</th><th class="text-end">Util</th>
-          <th class="text-end">Overtime</th><th class="text-end">Late</th>
+          <th class="text-end" title="Rostered hours beyond the 40-hour contract, from covering leave or absence">Cover overtime</th>
+          <th class="text-end" title="Time on site after the end of a shift">Stayed late</th><th class="text-end">Late</th>
           <th class="text-end">Absent</th><th class="text-end">Leave</th>
         </tr>
       </thead>
@@ -244,7 +249,12 @@
           <td class="text-end text-secondary">{{ row.scheduled_hours }}</td>
           <td class="text-end">{{ row.worked_hours }}</td>
           <td class="text-end">{{ row.utilisation }}%</td>
-          <td class="text-end {{ 'text-warning fw-semibold' if row.overtime_hours }}">{{ row.overtime_hours }}</td>
+          <td class="text-end">
+            {% if row.cover_overtime_hours %}
+            <span class="badge-soft amber">{{ row.cover_overtime_hours }}h</span>
+            {% else %}<span class="text-secondary">-</span>{% endif %}
+          </td>
+          <td class="text-end">{{ row.overtime_hours }}</td>
           <td class="text-end {{ 'text-warning fw-semibold' if row.late_count }}">{{ row.late_count }}</td>
           <td class="text-end {{ 'text-danger fw-semibold' if row.absences }}">{{ row.absences }}</td>
           <td class="text-end">{{ row.leave_days }}</td>
@@ -263,7 +273,8 @@
       <thead class="table-light">
         <tr>
           <th>Department</th><th class="text-end">Staff</th><th class="text-end">Shifts</th>
-          <th class="text-end">Rostered</th><th class="text-end">Worked</th><th class="text-end">Overtime</th>
+          <th class="text-end">Rostered</th><th class="text-end">Worked</th>
+          <th class="text-end">Cover overtime</th><th class="text-end">Stayed late</th>
           <th class="text-end">Gaps</th><th style="width:140px">Fill rate</th>
         </tr>
       </thead>
@@ -275,6 +286,10 @@
           <td class="text-end">{{ row.shifts }}</td>
           <td class="text-end text-secondary">{{ row.scheduled_hours }}</td>
           <td class="text-end">{{ row.worked_hours }}</td>
+          <td class="text-end">
+            {% if row.cover_overtime_hours %}<span class="badge-soft amber">{{ row.cover_overtime_hours }}h</span>
+            {% else %}<span class="text-secondary">-</span>{% endif %}
+          </td>
           <td class="text-end">{{ row.overtime_hours }}</td>
           <td class="text-end {{ 'text-danger fw-semibold' if row.gaps }}">{{ row.gaps }}</td>
           <td>
