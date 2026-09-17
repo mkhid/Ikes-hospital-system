@@ -215,31 +215,37 @@
   }
 
   /** Night and weekend duty per staff member: the fairness picture. */
+  //
+  // Each person gets two bars. The first stacks their morning, afternoon and
+  // night shifts, so its length is their whole week and its colours show the
+  // mix. The second is their weekend shifts, drawn apart because a weekend
+  // shift is also one of the morning, afternoon or night shifts already
+  // counted: stacking it in would count it twice.
   function workloadChart(node, spec) {
+    var shift = { stack: "shifts", borderRadius: 3, borderSkipped: false };
     return new global.Chart(node, {
       type: "bar",
       data: {
         labels: spec.labels,
         datasets: [
-          {
-            label: "Night shifts",
-            data: spec.nights,
-            backgroundColor: PALETTE.ink,
-            borderRadius: 6,
-          },
+          Object.assign({ label: "Morning", data: spec.mornings, backgroundColor: PALETTE.brand }, shift),
+          Object.assign({ label: "Afternoon", data: spec.afternoons, backgroundColor: PALETTE.blue }, shift),
+          Object.assign({ label: "Night", data: spec.nights, backgroundColor: PALETTE.ink }, shift),
           {
             label: "Weekend shifts",
             data: spec.weekends,
             backgroundColor: PALETTE.amber,
-            borderRadius: 6,
+            borderRadius: 3,
+            borderSkipped: false,
+            stack: "weekends",
           },
         ],
       },
       options: {
         indexAxis: "y",
         scales: {
-          x: gridScale({ beginAtZero: true, ticks: { precision: 0 } }),
-          y: gridScale({ grid: { display: false } }),
+          x: gridScale({ stacked: true, beginAtZero: true, ticks: { precision: 0 } }),
+          y: gridScale({ stacked: true, grid: { display: false } }),
         },
         plugins: { legend: { position: "bottom" } },
       },

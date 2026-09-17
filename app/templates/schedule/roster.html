@@ -221,10 +221,12 @@
         </span>
       </div>
       <div class="card-body">
-        <div class="chart-box h-md mb-3">
+        <div class="chart-box h-lg mb-3">
           <canvas id="workloadChart" data-chart='{{ {
             "kind": "workload",
             "labels": fairness.rows | map(attribute="staff") | map(attribute="full_name") | list,
+            "mornings": fairness.rows | map(attribute="morning") | list,
+            "afternoons": fairness.rows | map(attribute="afternoon") | list,
             "nights": fairness.rows | map(attribute="nights") | list,
             "weekends": fairness.rows | map(attribute="weekends") | list
           } | tojson }}'></canvas>
@@ -263,12 +265,14 @@
                 <td class="text-end">{{ row.weekends }}</td>
                 <td class="text-end fw-semibold">{{ row.hours }}</td>
                 <td class="text-end">
+                  {% set contract_label = row.contract_max if row.contract_hours == row.contract_max
+                                          else row.contract_hours|string ~ '–' ~ row.contract_max|string %}
                   {% if row.off_contract > 0 %}
-                  <span class="badge-soft amber" title="Above contracted hours">{{ row.contract_hours }} (+{{ row.off_contract }})</span>
+                  <span class="badge-soft amber" title="Above contracted hours: cover overtime">{{ contract_label }} (+{{ row.off_contract }})</span>
                   {% elif row.off_contract < 0 %}
-                  <span class="badge-soft red" title="Below contracted hours">{{ row.contract_hours }} ({{ row.off_contract }})</span>
+                  <span class="badge-soft red" title="Below contracted hours">{{ contract_label }} ({{ row.off_contract }})</span>
                   {% else %}
-                  <span class="text-secondary">{{ row.contract_hours }}</span>
+                  <span class="text-secondary">{{ contract_label }}</span>
                   {% endif %}
                   {% if row.leave_days %}
                   <div class="text-secondary" style="font-size:.66rem">{{ row.leave_days }} day{{ '' if row.leave_days == 1 else 's' }} leave</div>
@@ -282,9 +286,11 @@
       </div>
       <div class="card-footer small text-secondary">
         A night spread of 0 means every staff member took the same number of night
-        shifts; staff not cleared for nights always count as 0. Contract is each
-        person's contracted hours for the week: 40, less 8 for each day of
-        approved leave. The highlighted count is the shift they prefer.
+        shifts; staff not cleared for nights always count as 0. Contract is 40
+        hours. In a week with approved leave it is a range, from 40 less 8 per
+        leave day up to 40, since leave on a rest day costs no shift. Amber is
+        above 40, which is cover overtime; red is below the range. The
+        highlighted count is the shift they prefer.
       </div>
     </div>
   </div>

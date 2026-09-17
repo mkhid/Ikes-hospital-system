@@ -233,11 +233,17 @@ def fairness_summary(roster):
     Per-staff workload for the roster page: the fairness counts, each person's
     mix of shifts and stated preference, and their hours against their contract.
 
-    Hours are compared with each person's contracted hours for the week rather
-    than with each other. A colleague on three days' leave is contracted for 16
-    hours, not 40, so a raw hours spread would report her correct week as a
-    24-hour imbalance. contract_spread is the spread of hours minus contract,
-    which is zero when everyone is rostered exactly to their contract.
+    Hours are compared with each person's contract rather than with each other,
+    because a raw hours spread reports a colleague on leave as an imbalance.
+
+    Without leave the contract is exactly 40 hours. In a week with leave it is a
+    range. The floor is the engine's own target, one shift less per leave day.
+    The ceiling stays at 40, because leave approved after a roster is published
+    only releases the days someone was actually due to work: leave running
+    Thursday to Saturday over a Saturday rest day costs two shifts, not three,
+    so 24 hours is a correct week even though the floor is 16. Only hours above
+    40, which the reports count as cover overtime, or below the floor are
+    flagged.
     """
     from datetime import timedelta
 
@@ -287,15 +293,21 @@ def fairness_summary(roster):
         row["afternoon"] = counts.get("AFTERNOON", 0)
         row["shifts"] = sum(counts.values())
         row["leave_days"] = len(leave_days[staff.id])
-        contract = policy.contract_hours(row["leave_days"])
+        floor = policy.contract_hours(row["leave_days"])
+        ceiling = float(policy.max_weekly_hours)
         if staff.max_weekly_hours:
-            contract = min(contract, staff.max_weekly_hours)
-        row["contract_hours"] = round(contract, 1)
-        row["off_contract"] = round(row["hours"] - contract, 1)
+            floor = min(floor, staff.max_weekly_hours)
+            ceiling = min(ceiling, staff.max_weekly_hours)
+        row["contract_hours"] = round(floor, 1)
+        row["contract_max"] = round(ceiling, 1)
+        if row["hours"] > ceiling:
+            row["off_contract"] = round(row["hours"] - ceiling, 1)
+        elif row["hours"] < floor:
+            row["off_contract"] = round(row["hours"] - floor, 1)
+        else:
+            row["off_contract"] = 0.0
         row["preferred_shift"] = staff.preferred_shift
         row["preferred_label"] = shift_names.get(staff.preferred_shift)
 
-    gaps = [row["off_contract"] for row in report["rows"]] or [0]
-    report["contract_spread"] = round(max(gaps) - min(gaps), 1)
-    report["off_contract_count"] = len([g for g in gaps if g])
+    report["off_contract_count"] = len([r for r in report["rows"] if r["off_contract"]])
     return report
