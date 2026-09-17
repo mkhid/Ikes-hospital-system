@@ -212,7 +212,12 @@
           <p class="mb-0 small text-secondary">How the week's burden falls across the department.</p>
         </div>
         <span class="text-secondary small">
-          Night spread {{ fairness.night_spread }} &middot; Hours spread {{ fairness.hours_spread }}h
+          Night spread {{ fairness.night_spread }} &middot;
+          {% if fairness.off_contract_count %}
+          <span class="text-warning-emphasis fw-semibold">{{ fairness.off_contract_count }} off contract</span>
+          {% else %}
+          Everyone on contract
+          {% endif %}
         </span>
       </div>
       <div class="card-body">
@@ -229,22 +234,46 @@
           <table class="table table-sm table-hover align-middle mb-0 small">
             <thead class="table-light">
               <tr>
-                <th>Staff</th><th>Role</th>
-                <th class="text-end">Shifts</th><th class="text-end">Nights</th>
-                <th class="text-end">Weekends</th><th class="text-end">Hours</th>
+                <th>Staff</th><th>Prefers</th>
+                <th class="text-end">Morning</th><th class="text-end">Afternoon</th>
+                <th class="text-end">Night</th><th class="text-end">Weekends</th>
+                <th class="text-end">Hours</th><th class="text-end">Contract</th>
               </tr>
             </thead>
             <tbody>
               {% for row in fairness.rows %}
+              {% set pref = row.preferred_shift %}
               <tr>
-                <td class="fw-semibold">{{ row.staff.full_name }}</td>
-                <td class="text-secondary">{{ row.staff.job_title or row.staff.role_label }}</td>
-                <td class="text-end">
-                  {{ roster.live_assignments() | selectattr('staff_id', 'equalto', row.staff.id) | list | length }}
+                <td>
+                  <span class="fw-semibold">{{ row.staff.full_name }}</span>
+                  <div class="text-secondary" style="font-size:.68rem">
+                    {{ row.staff.job_title or row.staff.role_label }}
+                    {%- if not row.staff.can_work_nights %} &middot; not cleared for nights{% endif %}
+                  </div>
                 </td>
-                <td class="text-end">{{ row.nights }}</td>
+                <td>
+                  {% if row.preferred_label %}<span class="badge-soft brand">{{ row.preferred_label }}</span>
+                  {% else %}<span class="text-secondary">-</span>{% endif %}
+                </td>
+                {# The count for the shift a person prefers is emphasised, so it is
+                   visible at a glance whether their preference was honoured. #}
+                <td class="text-end {{ 'fw-bold text-primary' if pref == 'MORNING' }}">{{ row.morning }}</td>
+                <td class="text-end {{ 'fw-bold text-primary' if pref == 'AFTERNOON' }}">{{ row.afternoon }}</td>
+                <td class="text-end {{ 'fw-bold text-primary' if pref == 'NIGHT' }}">{{ row.nights }}</td>
                 <td class="text-end">{{ row.weekends }}</td>
                 <td class="text-end fw-semibold">{{ row.hours }}</td>
+                <td class="text-end">
+                  {% if row.off_contract > 0 %}
+                  <span class="badge-soft amber" title="Above contracted hours">{{ row.contract_hours }} (+{{ row.off_contract }})</span>
+                  {% elif row.off_contract < 0 %}
+                  <span class="badge-soft red" title="Below contracted hours">{{ row.contract_hours }} ({{ row.off_contract }})</span>
+                  {% else %}
+                  <span class="text-secondary">{{ row.contract_hours }}</span>
+                  {% endif %}
+                  {% if row.leave_days %}
+                  <div class="text-secondary" style="font-size:.66rem">{{ row.leave_days }} day{{ '' if row.leave_days == 1 else 's' }} leave</div>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -253,7 +282,9 @@
       </div>
       <div class="card-footer small text-secondary">
         A night spread of 0 means every staff member took the same number of night
-        shifts. The optimiser minimises this alongside weekend and hour spread.
+        shifts; staff not cleared for nights always count as 0. Contract is each
+        person's contracted hours for the week: 40, less 8 for each day of
+        approved leave. The highlighted count is the shift they prefer.
       </div>
     </div>
   </div>

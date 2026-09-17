@@ -229,15 +229,73 @@ def override_assignment(assignment, new_staff, actor, reason=None, notify=True):
 
 
 def fairness_summary(roster):
-    """Per-staff night, weekend and hour counts for the roster page."""
+    """
+    Per-staff workload for the roster page: the fairness counts, each person's
+    mix of shifts and stated preference, and their hours against their contract.
+
+    Hours are compared with each person's contracted hours for the week rather
+    than with each other. A colleague on three days' leave is contracted for 16
+    hours, not 40, so a raw hours spread would report her correct week as a
+    24-hour imbalance. contract_spread is the spread of hours minus contract,
+    which is zero when everyone is rostered exactly to their contract.
+    """
+    from datetime import timedelta
+
+    from flask import current_app
+
+    from app.constants import LeaveStatus
+    from app.models import LeaveRequest, Shift
+    from app.services.constraints import SchedulingPolicy
+
     department = roster.department
     staff_list = [s for s in department.members if s.is_active]
     tally = WorkloadTally.for_staff(staff_list)
     by_id = {s.id: s for s in staff_list}
+    mix = {s.id: {} for s in staff_list}
 
     for assignment in roster.live_assignments():
         staff = by_id.get(assignment.staff_id)
         if staff is not None:
             tally.add(staff, assignment.shift, assignment.work_date)
+            code = assignment.shift.code
+            mix[staff.id][code] = mix[staff.id].get(code, 0) + 1
 
-    return FairnessObjective().report(tally, staff_list)
+    report = FairnessObjective().report(tally, staff_list)
+
+    # Contracted hours, the same rule the engine rosters to: one shift less for
+    # each day of approved leave in the week, and never above a personal cap.
+    policy = SchedulingPolicy.from_config(current_app.config)
+    week = {roster.week_start + timedelta(days=i) for i in range(7)}
+    leave_days = {s.id: set() for s in staff_list}
+    for request in LeaveRequest.query.filter(
+        LeaveRequest.staff_id.in_(list(by_id)),
+        LeaveRequest.status == LeaveStatus.APPROVED,
+        LeaveRequest.start_date <= roster.week_end,
+        LeaveRequest.end_date >= roster.week_start,
+    ).all():
+        day = request.start_date
+        while day <= request.end_date:
+            if day in week:
+                leave_days[request.staff_id].add(day)
+            day += timedelta(days=1)
+
+    shift_names = {s.code: s.short_name for s in Shift.query.all()}
+    for row in report["rows"]:
+        staff = row["staff"]
+        counts = mix[staff.id]
+        row["morning"] = counts.get("MORNING", 0)
+        row["afternoon"] = counts.get("AFTERNOON", 0)
+        row["shifts"] = sum(counts.values())
+        row["leave_days"] = len(leave_days[staff.id])
+        contract = policy.contract_hours(row["leave_days"])
+        if staff.max_weekly_hours:
+            contract = min(contract, staff.max_weekly_hours)
+        row["contract_hours"] = round(contract, 1)
+        row["off_contract"] = round(row["hours"] - contract, 1)
+        row["preferred_shift"] = staff.preferred_shift
+        row["preferred_label"] = shift_names.get(staff.preferred_shift)
+
+    gaps = [row["off_contract"] for row in report["rows"]] or [0]
+    report["contract_spread"] = round(max(gaps) - min(gaps), 1)
+    report["off_contract_count"] = len([g for g in gaps if g])
+    return report
