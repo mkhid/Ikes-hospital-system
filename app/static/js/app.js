@@ -440,6 +440,189 @@
   };
 
   // ------------------------------------------------------------------
+  // Loading indicators
+  // ------------------------------------------------------------------
+  // Every page is rendered on the server, so the waits a user sees are the
+  // gap between clicking and the next page arriving, and the work behind a
+  // form: generating a roster, re-optimising after leave, notifying a whole
+  // department. Both are covered from one place, by listening at the document,
+  // so no template has to opt in.
+  //
+  // The overlay appears only after a short CSS delay, so a page that returns
+  // almost at once never flashes it. Exports are the exception: a PDF or CSV
+  // downloads without leaving the page, so an overlay would never clear. Those
+  // get a brief spinner on the button that was pressed instead.
+  //
+  // Moving between pages inside the portal shows a skeleton of placeholder
+  // cards in the content area, leaving the navigation usable; the spinner
+  // overlay is kept for actions that do real work, where a message saying what
+  // is happening matters, and for pages without the portal shell, such as
+  // sign-in.
+  //
+  // A link or form can opt out with data-no-loader, and set its own message
+  // with data-loading-text.
+  var LOADING_MESSAGES = [
+    [/\/schedule\/generate$/, "Generating roster…"],
+    [/\/publish$/, "Publishing and notifying staff…"],
+    [/\/withdraw$/, "Withdrawing roster…"],
+    [/\/leave\/\d+\/approve$/, "Approving leave and finding cover…"],
+    [/\/leave\/absence$/, "Recording absence and finding cover…"],
+    [/\/assignment\/\d+\/(fill|override)$/, "Finding cover…"],
+    [/\/staff\/\d+\/toggle$/, "Updating account…"],
+    [/\/login$/, "Signing in…"],
+  ];
+  var DOWNLOAD = /\.(pdf|csv)$/i;
+
+  function loaderMessage(element, url) {
+    var own = element && element.getAttribute("data-loading-text");
+    if (own) { return own; }
+    for (var i = 0; i < LOADING_MESSAGES.length; i++) {
+      if (LOADING_MESSAGES[i][0].test(url.pathname)) { return LOADING_MESSAGES[i][1]; }
+    }
+    return "Loading…";
+  }
+
+  function showPageLoader(message) {
+    var loader = document.getElementById("page-loader");
+    if (!loader) { return; }
+    var label = loader.querySelector("[data-loader-label]");
+    if (label) { label.textContent = message; }
+    loader.classList.add("is-active");
+    loader.setAttribute("aria-hidden", "false");
+    document.documentElement.setAttribute("aria-busy", "true");
+  }
+
+  var skeletonTimer = null;
+
+  /** Swap the content area for the skeleton. False where there is no portal shell. */
+  function showContentSkeleton() {
+    var main = document.querySelector(".app-main");
+    if (!main) { return false; }
+    global.clearTimeout(skeletonTimer);
+    // Same short grace period as the overlay, so a page that arrives at once
+    // never flashes placeholders.
+    skeletonTimer = global.setTimeout(function () {
+      main.classList.add("is-navigating");
+      main.setAttribute("aria-busy", "true");
+      global.scrollTo(0, 0);
+    }, 150);
+    return true;
+  }
+
+  function hidePageLoader() {
+    global.clearTimeout(skeletonTimer);
+    var main = document.querySelector(".app-main");
+    if (main) {
+      main.classList.remove("is-navigating");
+      main.removeAttribute("aria-busy");
+    }
+    var loader = document.getElementById("page-loader");
+    if (loader) {
+      loader.classList.remove("is-active");
+      loader.setAttribute("aria-hidden", "true");
+    }
+    document.documentElement.removeAttribute("aria-busy");
+    var busy = document.querySelectorAll(".is-loading");
+    for (var i = 0; i < busy.length; i++) { clearButtonLoading(busy[i]); }
+    var forms = document.querySelectorAll("form[data-submitting]");
+    for (var f = 0; f < forms.length; f++) { forms[f].removeAttribute("data-submitting"); }
+  }
+
+  function setButtonLoading(control) {
+    if (!control || control.classList.contains("is-loading")) { return; }
+    control.classList.add("is-loading");
+    control.setAttribute("aria-busy", "true");
+    var spinner = document.createElement("span");
+    spinner.className = "spinner-border spinner-border-sm btn-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    control.insertBefore(spinner, control.firstChild);
+    // Disabled on the next tick, not now: the form has to be built with this
+    // button as its submitter before it stops being a live control.
+    global.setTimeout(function () {
+      if (control.tagName === "BUTTON" || control.tagName === "INPUT") { control.disabled = true; }
+    }, 0);
+  }
+
+  function clearButtonLoading(control) {
+    control.classList.remove("is-loading");
+    control.removeAttribute("aria-busy");
+    if (control.tagName === "BUTTON" || control.tagName === "INPUT") { control.disabled = false; }
+    var spinner = control.querySelector(".btn-spinner");
+    if (spinner) { spinner.parentNode.removeChild(spinner); }
+  }
+
+  function flashDownload(control) {
+    setButtonLoading(control);
+    global.setTimeout(function () { clearButtonLoading(control); }, 2500);
+  }
+
+  document.addEventListener("click", function (event) {
+    if (event.defaultPrevented || event.button !== 0) { return; }
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) { return; }
+    var link = event.target.closest ? event.target.closest("a[href]") : null;
+    if (!link || link.hasAttribute("data-no-loader") || link.hasAttribute("download")) { return; }
+    if (link.hasAttribute("data-bs-toggle")) { return; }
+    if (link.target && link.target !== "_self") { return; }
+
+    var href = link.getAttribute("href");
+    if (!href || href.charAt(0) === "#" || /^(mailto|tel|javascript):/i.test(href)) { return; }
+    var url = new URL(link.href, global.location.href);
+    if (url.origin !== global.location.origin) { return; }
+    if (url.pathname === global.location.pathname && url.search === global.location.search && url.hash) {
+      return;
+    }
+
+    if (DOWNLOAD.test(url.pathname)) {
+      flashDownload(link);
+      return;
+    }
+    if (!showContentSkeleton()) { showPageLoader(loaderMessage(link, url)); }
+  });
+
+  // Listening at the document means a form's own submit handlers, such as a
+  // confirmation prompt, have already run; a cancelled submit is left alone.
+  document.addEventListener("submit", function (event) {
+    if (event.defaultPrevented) { return; }
+    var form = event.target;
+    if (form.hasAttribute("data-no-loader")) { return; }
+    if (form.target && form.target !== "_self") { return; }
+
+    if (form.hasAttribute("data-submitting")) {
+      // A second press while the first is still on its way.
+      event.preventDefault();
+      return;
+    }
+
+    var url = new URL(form.getAttribute("action") || global.location.href, global.location.href);
+    var submitter = event.submitter || form.querySelector('[type="submit"]');
+    if (DOWNLOAD.test(url.pathname)) {
+      flashDownload(submitter);
+      return;
+    }
+
+    form.setAttribute("data-submitting", "");
+    setButtonLoading(submitter);
+    // A GET form is a filter or search: just another page, so it gets the
+    // skeleton. A POST does work, so it gets the overlay and its message.
+    var isGet = (form.getAttribute("method") || "get").toLowerCase() === "get";
+    if (!(isGet && showContentSkeleton())) { showPageLoader(loaderMessage(form, url)); }
+  });
+
+  // Returning with the Back button restores the page from the browser's cache,
+  // overlay and disabled buttons included, so clear them.
+  global.addEventListener("pageshow", function (event) {
+    if (event.persisted) { hidePageLoader(); }
+  });
+
+  // Escape dismisses the overlay if the user stops a load themselves.
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") { hidePageLoader(); }
+  });
+
+  HospitalPortal.showLoader = showPageLoader;
+  HospitalPortal.hideLoader = hidePageLoader;
+
+  // ------------------------------------------------------------------
   // Form helpers
   // ------------------------------------------------------------------
   /** Ask before an action that cannot be quietly undone. */
@@ -466,8 +649,6 @@
     var out = document.getElementById(outputId);
     if (!dateEl || !out) { return; }
 
-    var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     function mondayOf(d) {
@@ -478,9 +659,11 @@
       return copy;
     }
 
-    function fmt(d, withYear) {
-      return DAYS[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()] +
-             (withYear ? " " + d.getFullYear() : "");
+    // Day-first and numeric, like every date the server renders: Mon 14/09/2026.
+    function fmt(d) {
+      var dd = ("0" + d.getDate()).slice(-2);
+      var mm = ("0" + (d.getMonth() + 1)).slice(-2);
+      return DAYS[d.getDay()] + " " + dd + "/" + mm + "/" + d.getFullYear();
     }
 
     function update() {
@@ -497,7 +680,7 @@
       var end = new Date(start.getTime());
       end.setDate(end.getDate() + weeks * 7 - 1);
 
-      var label = fmt(start, false) + " to " + fmt(end, true);
+      var label = fmt(start) + " to " + fmt(end);
       if (weeks > 1) { label += "  (" + weeks + " rosters)"; }
       out.textContent = label;
     }

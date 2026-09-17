@@ -193,9 +193,53 @@
 
       {% block content %}{% endblock %}
     </div>
+
+    {# Placeholder shown in place of the content while the next page loads, so
+       moving around the portal gives immediate feedback without covering the
+       navigation. Generic by design: the next page's layout is not known until
+       it arrives. #}
+    <div class="content-skeleton" aria-hidden="true">
+      <div class="row g-3 mb-3">
+        {% for _ in range(4) %}
+        <div class="col-6 col-xl-3">
+          <div class="sk-card">
+            <span class="sk-line" style="width:45%"></span>
+            <span class="sk-line sk-line--lg" style="width:30%"></span>
+            <span class="sk-line" style="width:70%"></span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="row g-3">
+        <div class="col-xl-8">
+          <div class="sk-card">
+            <span class="sk-line sk-line--md" style="width:35%"></span>
+            <span class="sk-block"></span>
+            {% for w in (92, 80, 86, 64, 74) %}<span class="sk-line" style="width:{{ w }}%"></span>{% endfor %}
+          </div>
+        </div>
+        <div class="col-xl-4">
+          <div class="sk-card">
+            <span class="sk-line sk-line--md" style="width:50%"></span>
+            {% for _ in range(5) %}
+            <div class="sk-row"><span class="sk-circle"></span><span class="sk-line" style="width:70%"></span></div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
+
+{# Shown by app.js while the next page or a form's work is on its way. Outside
+   the layout block so the sign-in page has it too. #}
+<div class="page-loader" id="page-loader" role="status" aria-live="polite" aria-hidden="true">
+  <div class="page-loader__box">
+    <span class="loader-ring" aria-hidden="true"></span>
+    <span data-loader-label>Loading&hellip;</span>
+  </div>
+</div>
 
 <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>

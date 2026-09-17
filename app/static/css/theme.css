@@ -1189,3 +1189,116 @@ body {
   color: var(--bs-table-color);
   border-color: var(--bs-table-border-color);
 }
+
+/* ---------- Loading indicators ---------------------------------------
+   The overlay fades in only after a short delay, so a page that arrives
+   almost at once never flashes it; while hidden it takes no clicks. */
+.page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(241, 244, 249, 0.55);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0s linear 0.18s;
+}
+.page-loader.is-active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.18s ease 0.15s, visibility 0s linear 0.15s;
+}
+[data-bs-theme="dark"] .page-loader { background: rgba(8, 13, 20, 0.55); }
+.page-loader__box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 50rem;
+  box-shadow: var(--shadow-raised);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.loader-ring {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 3px solid var(--line);
+  border-top-color: var(--brand);
+  animation: loader-spin 0.7s linear infinite;
+}
+@keyframes loader-spin { to { transform: rotate(360deg); } }
+
+/* Spinner inside the button that was pressed. */
+.btn-spinner { margin-right: 0.45rem; vertical-align: -0.15em; }
+.is-loading { cursor: progress; }
+a.is-loading { pointer-events: none; opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-ring, .btn-spinner { animation-duration: 1.8s; }
+}
+
+/* ---------- Skeleton while the next page loads ------------------------ */
+[data-bs-theme="light"], :root { --sk-base: #e8edf4; --sk-shine: #f5f8fc; }
+[data-bs-theme="dark"] { --sk-base: #1c2736; --sk-shine: #273549; }
+
+.content-skeleton {
+  display: none;
+  padding: 1.25rem 1.4rem 3rem;
+  max-width: 1500px;
+  width: 100%;
+}
+.app-main.is-navigating .app-content { display: none; }
+.app-main.is-navigating .content-skeleton { display: block; }
+
+.sk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  height: 100%;
+  padding: 1.1rem;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.sk-row { display: flex; align-items: center; gap: 0.7rem; }
+
+.sk-line, .sk-block, .sk-circle,
+.app-main.is-navigating .topbar h1,
+.app-main.is-navigating .topbar p {
+  background: linear-gradient(90deg, var(--sk-base) 25%, var(--sk-shine) 37%, var(--sk-base) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+}
+.sk-line { display: block; height: 0.7rem; border-radius: 50rem; }
+.sk-line--md { height: 0.95rem; }
+.sk-line--lg { height: 1.7rem; border-radius: 0.5rem; }
+.sk-block { display: block; height: 11rem; border-radius: var(--radius-inner); }
+.sk-circle { width: 2rem; height: 2rem; border-radius: 50%; flex-shrink: 0; }
+
+/* The heading still names the page being left, so it shimmers too. */
+.app-main.is-navigating .topbar h1,
+.app-main.is-navigating .topbar p {
+  color: transparent;
+  border-radius: 0.4rem;
+  max-width: 16rem;
+}
+.app-main.is-navigating .topbar p { max-width: 24rem; margin-top: 0.3rem; }
+
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-line, .sk-block, .sk-circle,
+  .app-main.is-navigating .topbar h1,
+  .app-main.is-navigating .topbar p { animation: none; }
+}
